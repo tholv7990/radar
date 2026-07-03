@@ -9,6 +9,13 @@ class Repository {
   Future<void> signIn(String email, String password) =>
       _db.auth.signInWithPassword(email: email, password: password);
 
+  /// Returns true if a session was created (signed in immediately),
+  /// false if email confirmation is required before sign-in. Throws on failure.
+  Future<bool> signUp(String email, String password) async {
+    final res = await _db.auth.signUp(email: email, password: password);
+    return res.session != null;
+  }
+
   Future<void> signOut() => _db.auth.signOut();
 
   Future<List<SignalItem>> fetchFeed() async {

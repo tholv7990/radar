@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/repository.dart';
 import '../theme.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -37,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Text('RADAR', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: 3, color: kInk)),
+              Image.asset('assets/brand/logo_lockup.png', height: 46),
               const SizedBox(height: 24),
               TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email'), keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 12),
@@ -45,6 +46,12 @@ class _LoginScreenState extends State<LoginScreen> {
               if (_error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(_error!, style: const TextStyle(color: kRed))),
               const SizedBox(height: 20),
               SizedBox(width: double.infinity, child: FilledButton(onPressed: _busy ? null : _submit, child: Text(_busy ? 'Signing in…' : 'Sign in'))),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: _busy ? null : () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                child: const Text("Don't have an account?  Create one"),
+              ),
             ]),
           ),
         ),

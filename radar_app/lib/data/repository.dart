@@ -28,4 +28,26 @@ class Repository {
       );
     }
   }
+
+  /// Trigger a deep-dive on the server (Edge Function). Fire-and-forget;
+  /// the result arrives via [deepDiveStream].
+  Future<void> invokeDeepDive(int entityId) async {
+    await _db.functions.invoke('deep-dive', body: {'entity_id': entityId});
+  }
+
+  /// Live stream of the deep_dive_cache row for one entity (null until it exists).
+  Stream<Map<String, dynamic>?> deepDiveStream(int entityId) {
+    return _db
+        .from('deep_dive_cache')
+        .stream(primaryKey: ['entity_id'])
+        .eq('entity_id', entityId)
+        .map((rows) => rows.isEmpty ? null : rows.first);
+  }
+
+  /// One-shot read of the cached deep-dive row (null if never run).
+  Future<Map<String, dynamic>?> fetchDeepDive(int entityId) async {
+    final rows = await _db.from('deep_dive_cache').select().eq('entity_id', entityId).limit(1);
+    final list = rows as List;
+    return list.isEmpty ? null : list.first as Map<String, dynamic>;
+  }
 }

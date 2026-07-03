@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
+import 'theme.dart';
+import 'screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,26 +17,19 @@ class RadarApp extends StatelessWidget {
     return MaterialApp(
       title: 'RADAR',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true),
+      theme: buildRadarTheme(),
       home: StreamBuilder<AuthState>(
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
           final session = Supabase.instance.client.auth.currentSession;
-          return session == null ? const _LoginPlaceholder() : const _HomePlaceholder();
+          return session == null ? const LoginScreen() : const _HomePlaceholder();
         },
       ),
     );
   }
 }
 
-// Placeholders — replaced by real LoginScreen (Task 4) and HomeScaffold (Task 6).
-class _LoginPlaceholder extends StatelessWidget {
-  const _LoginPlaceholder();
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: Text('Login')));
-}
-
+// Placeholder — replaced by the real HomeScaffold in Task 6.
 class _HomePlaceholder extends StatelessWidget {
   const _HomePlaceholder();
   @override

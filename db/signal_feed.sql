@@ -45,6 +45,9 @@ select
     when c.velocity::numeric / nullif(c.total_metric,0) > 0.03 then 'rising'
     else 'steady'
   end as momentum_stage,
-  coalesce(c.velocity::numeric, c.provisional_quality::numeric) as rank_score
-from calc c;
+  coalesce(c.velocity::numeric, c.provisional_quality::numeric) as rank_score,
+  dd.quality_score as quality_score,
+  dd.status as deep_dive_status
+from calc c
+left join deep_dive_cache dd on dd.entity_id = c.id;
 grant select on signal_feed to authenticated;

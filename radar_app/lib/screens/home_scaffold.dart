@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../data/repository.dart';
 import '../models/signal_item.dart';
@@ -66,6 +67,17 @@ class _HomeScaffoldState extends State<HomeScaffold> {
         sortKey = sk;
       });
 
+  String _asOf() {
+    final ts = _items.map((e) => e.capturedAt).whereType<DateTime>().toList();
+    if (ts.isEmpty) return '—';
+    ts.sort();
+    return DateFormat('MMM d · HH:mm').format(ts.last.toLocal());
+  }
+
+  Future<void> _signOut() async {
+    await Repository.instance.signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget body;
@@ -113,29 +125,34 @@ class _HomeScaffoldState extends State<HomeScaffold> {
             _Header(
               count: _items.length,
               loading: _loading,
+              asOf: _asOf(),
               onRefresh: _load,
+              onSignOut: _signOut,
             ),
             Expanded(child: body),
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        backgroundColor: kSurf,
-        indicatorColor: kAccent.withValues(alpha: .1),
-        destinations: [
-          const NavigationDestination(icon: Icon(Icons.list), label: 'Feed'),
-          const NavigationDestination(icon: Icon(Icons.radar), label: 'Scope'),
-          NavigationDestination(
-            icon: Icon(
-              Icons.bookmark_border,
-              color: _tab == 2 ? kAccent : kFaint,
-            ),
-            selectedIcon: const Icon(Icons.bookmark, color: kAccent),
-            label: 'Watchlist',
-          ),
-        ],
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          backgroundColor: kSurf,
+          indicatorColor: kAccent.withValues(alpha: 0.12),
+          iconTheme: WidgetStateProperty.resolveWith((s) => IconThemeData(
+              color: s.contains(WidgetState.selected) ? kAccent : kFaint)),
+          labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: s.contains(WidgetState.selected) ? kAccent : kFaint)),
+        ),
+        child: NavigationBar(
+          selectedIndex: _tab,
+          onDestinationSelected: (i) => setState(() => _tab = i),
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.list), label: 'Feed'),
+            NavigationDestination(icon: Icon(Icons.radar), label: 'Scope'),
+            NavigationDestination(icon: Icon(Icons.bookmark_border), selectedIcon: Icon(Icons.bookmark), label: 'Watchlist'),
+          ],
+        ),
       ),
     );
   }
@@ -144,8 +161,16 @@ class _HomeScaffoldState extends State<HomeScaffold> {
 class _Header extends StatelessWidget {
   final int count;
   final bool loading;
+  final String asOf;
   final VoidCallback onRefresh;
-  const _Header({required this.count, required this.loading, required this.onRefresh});
+  final VoidCallback onSignOut;
+  const _Header({
+    required this.count,
+    required this.loading,
+    required this.asOf,
+    required this.onRefresh,
+    required this.onSignOut,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
@@ -175,31 +200,56 @@ class _Header extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(
-                  width: 34,
-                  height: 34,
-                  child: Material(
-                    color: kSurf,
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: onRefresh,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: kHair),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 34,
+                      height: 34,
+                      child: Material(
+                        color: kSurf,
+                        borderRadius: BorderRadius.circular(8),
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(8),
+                          onTap: onRefresh,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: kHair),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
+                            child: loading
+                                ? const SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(strokeWidth: 1.6, color: kMut),
+                                  )
+                                : const Icon(Icons.refresh, size: 16, color: kMut),
+                          ),
                         ),
-                        alignment: Alignment.center,
-                        child: loading
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(strokeWidth: 1.6, color: kMut),
-                              )
-                            : const Icon(Icons.refresh, size: 16, color: kMut),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 34,
+                      height: 34,
+                      child: Material(
+                        color: kSurf,
+                        borderRadius: BorderRadius.circular(8),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: onSignOut,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: kHair),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.logout, size: 16, color: kMut),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -226,9 +276,9 @@ class _Header extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'Last run',
-                  style: TextStyle(fontSize: 11.5, letterSpacing: -0.1, color: kMut),
+                Text(
+                  asOf,
+                  style: const TextStyle(fontSize: 11.5, letterSpacing: -0.1, color: kMut),
                 ),
                 const Spacer(),
                 Text(

@@ -16,13 +16,14 @@ class SignalItem {
   final String momentumStage; // emerging | rising | steady | fading | new
   final num rankScore;
   final String? watchState;   // seen | watching | dismissed | null
+  final DateTime? capturedAt;
 
   SignalItem({
     required this.id, required this.source, required this.name, this.oneLiner,
     this.url, this.language, required this.topics, this.stars, this.votes,
     this.comments, required this.provisionalQuality, this.velocity,
     this.totalMetric, required this.consistency, required this.momentumStage,
-    required this.rankScore, this.watchState,
+    required this.rankScore, this.watchState, this.capturedAt,
   });
 
   bool get isGithub => source == 'github';
@@ -48,5 +49,6 @@ class SignalItem {
         momentumStage: (m['momentum_stage'] ?? 'new') as String,
         rankScore: (m['rank_score'] ?? 0) as num,
         watchState: m['watch_state'] as String?,
+        capturedAt: m['captured_at'] == null ? null : DateTime.tryParse(m['captured_at'] as String),
       );
 }

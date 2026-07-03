@@ -16,7 +16,8 @@ calc as (
     l.captured_at, l.stars, l.forks, l.watchers, l.votes, l.comments,
     l.rating, l.pushed_at, l.archived, l.provisional_quality,
     p.id as prior_id,
-    case when e.source='github' then (l.stars - p.stars)
+    case when p.id is null then null
+         when e.source='github' then (l.stars - p.stars)
          else ((coalesce(l.votes,0)+coalesce(l.comments,0))
              - (coalesce(p.votes,0)+coalesce(p.comments,0))) end as velocity,
     case when e.source='github' then (l.forks - p.forks)

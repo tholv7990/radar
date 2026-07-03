@@ -14,10 +14,21 @@ cur.execute("select count(*) from signal_feed")
 n = cur.fetchone()[0]
 assert n > 0, "signal_feed empty — did the collector run?"
 
-cur.execute("select momentum_stage, rank_score, provisional_quality from signal_feed limit 5")
+cur.execute("select momentum_stage, rank_score, provisional_quality, source from signal_feed")
 rows = cur.fetchall()
-assert all(r[0] == 'new' for r in rows), "expected 'new' stage before 2nd snapshot"
-assert all(float(r[1]) == float(r[2]) for r in rows), "rank_score should equal provisional_quality at cold-start"
+assert all(r[0] == 'new' for r in rows), (
+    "expected 'new' stage for ALL rows (both sources) before 2nd snapshot — "
+    f"non-'new' rows: {[r for r in rows if r[0] != 'new']}"
+)
+assert all(float(r[1]) == float(r[2]) for r in rows), (
+    "rank_score should equal provisional_quality for ALL rows (both sources) at cold-start — "
+    f"mismatches: {[r for r in rows if float(r[1]) != float(r[2])]}"
+)
+sources_seen = {r[3] for r in rows}
+assert len(sources_seen) > 1, (
+    f"cold-start uniformity check only saw source(s) {sources_seen} — "
+    "need both github and producthunt rows to prove no cross-source asymmetry"
+)
 
 cur.execute("select rank_score from signal_feed order by rank_score desc limit 3")
 scores = [float(r[0]) for r in cur.fetchall()]
@@ -63,6 +74,29 @@ finally:
     conn.rollback()
     cur.execute("reset role")
 
+# --- anon-denial check ---------------------------------------------------
+# The app gates all data access behind login. An unauthenticated request
+# using the public `anon` key must NOT be able to read signal_feed (or the
+# underlying tables) — this is what db/grants.sql's `revoke ... from anon`
+# enforces. If Supabase's default-privilege auto-grant ever reopens this,
+# this check must fail (not silently pass).
+try:
+    cur.execute("set role anon")
+    try:
+        cur.execute("select 1 from signal_feed limit 1")
+    except Exception:
+        pass  # expected: permission denied
+    else:
+        raise AssertionError(
+            "anon role was able to read signal_feed — expected a permission error. "
+            "The `revoke ... from anon` in db/grants.sql may not be applied "
+            "(check for a schema-level or default-privilege grant reopening access)."
+        )
+finally:
+    conn.rollback()
+    cur.execute("reset role")
+
 conn.close()
-print(f"signal_feed OK — {n} rows, columns + cold-start + ordering verified")
+print(f"signal_feed OK — {n} rows, columns + cold-start + ordering verified across sources {sources_seen}")
 print(f"authenticated role OK — read {auth_n} rows via signal_feed, insert+delete on watchlist_state succeeded")
+print("anon role OK — denied read access to signal_feed as expected")

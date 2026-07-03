@@ -8,3 +8,9 @@ grant usage on schema public to authenticated;
 grant select on entities, snapshots, watchlist_state, deep_dive_cache to authenticated;
 grant insert, update, delete on watchlist_state to authenticated;
 grant select on signal_feed to authenticated;
+
+-- Supabase's default-privilege behavior may auto-grant `anon` SELECT on
+-- newly created objects. The app gates access behind login, so `anon` must
+-- never be able to read app data — revoke explicitly and idempotently
+-- (revoking a privilege that isn't held is a harmless no-op).
+revoke all on signal_feed, entities, snapshots, watchlist_state, deep_dive_cache from anon;

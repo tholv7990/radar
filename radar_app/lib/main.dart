@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'theme.dart';
 import 'screens/login_screen.dart';
+import 'screens/home_scaffold.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,17 +23,9 @@ class RadarApp extends StatelessWidget {
         stream: Supabase.instance.client.auth.onAuthStateChange,
         builder: (context, snapshot) {
           final session = Supabase.instance.client.auth.currentSession;
-          return session == null ? const LoginScreen() : const _HomePlaceholder();
+          return session == null ? const LoginScreen() : const HomeScaffold();
         },
       ),
     );
   }
-}
-
-// Placeholder — replaced by the real HomeScaffold in Task 6.
-class _HomePlaceholder extends StatelessWidget {
-  const _HomePlaceholder();
-  @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: Text('RADAR — Home')));
 }

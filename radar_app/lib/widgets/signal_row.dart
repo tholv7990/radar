@@ -52,11 +52,16 @@ class SignalRow extends StatelessWidget {
         ? [if (item.language != null && item.language!.isNotEmpty) item.language!, ...item.topics]
         : item.topics;
 
-    final velocity = item.velocity ?? item.totalMetric ?? 0;
-    final primaryText = item.isGithub
-        ? '${velocity >= 0 ? '+' : ''}${_numFmt.format(velocity)}'
-        : _numFmt.format(velocity);
-    final primaryUnit = item.isGithub ? 'stars / wk' : 'votes + comments';
+    // Cold-start (no prior snapshot) has null velocity → show the plain total
+    // with a total-style unit, not a misleading "+N / wk". Real velocity + the
+    // "/ wk" form appear once ≥2 snapshots exist.
+    final hasVel = item.velocity != null;
+    final metric = item.velocity ?? item.totalMetric ?? 0;
+    final sign = (item.isGithub && hasVel && metric >= 0) ? '+' : '';
+    final primaryText = '$sign${_numFmt.format(metric)}';
+    final primaryUnit = hasVel
+        ? (item.isGithub ? 'stars / wk' : 'votes + comments')
+        : (item.isGithub ? 'stars' : 'votes');
     final secondaryText = '${_numFmt.format(item.totalMetric ?? 0)} total';
 
     return Opacity(

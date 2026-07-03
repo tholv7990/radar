@@ -1,0 +1,46 @@
+# Codemagic CI/CD — build Radar (Flutter) for iOS and publish to TestFlight.
+# Full setup steps: docs/RELEASE-testflight.md
+#
+# Before the first build, in the Codemagic UI you must:
+#   1. Connect this GitHub repo (tholv7990/radar).
+#   2. Add an App Store Connect API key integration and name it `codemagic`
+#      (Teams/App settings -> Integrations -> App Store Connect). If you name it
+#      something else, change `integrations.app_store_connect` below to match.
+#   3. Replace APP_STORE_APPLE_ID below with your app's numeric Apple ID
+#      (App Store Connect -> your app -> App Information -> "Apple ID").
+workflows:
+  ios-testflight:
+    name: Radar iOS -> TestFlight
+    working_directory: radar_app        # the Flutter app lives in a subfolder of the repo
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: codemagic       # <- name of the App Store Connect API key you add in Codemagic
+    environment:
+      ios_signing:
+        distribution_type: app_store     # required for TestFlight
+        bundle_identifier: com.tholv7990.radar
+      vars:
+        APP_STORE_APPLE_ID: 0000000000   # <- REPLACE with your app's numeric Apple ID
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Install pods
+        script: find . -name "Podfile" -execdir pod install \;
+      - name: Flutter build ipa
+        script: |
+          flutter build ipa --release \
+            --build-number=$(($(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID") + 1)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true       # internal testers get the build with no review; external needs Apple beta review

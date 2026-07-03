@@ -27,14 +27,14 @@ export async function githubEvidence(e: Entity): Promise<Evidence> {
   if (raw["archived"] === true) vetoHints.push({ title: "Archived repository", note: "Repo is archived/read-only." });
 
   const contributors = await safe(async () => {
-    const r = await fetch(`${GH}/repos/${full}/contributors?per_page=100`, { headers: ghHeaders() });
+    const r = await fetch(`${GH}/repos/${full}/contributors?per_page=100`, { headers: ghHeaders(), signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error();
     return (await r.json() as unknown[]).length;
   }, -1);
   if (contributors >= 0) { grid.push({ label: "Contributors", value: String(contributors) }); ctx.contributors = contributors; }
 
   const releases = await safe(async () => {
-    const r = await fetch(`${GH}/repos/${full}/releases?per_page=10`, { headers: ghHeaders() });
+    const r = await fetch(`${GH}/repos/${full}/releases?per_page=10`, { headers: ghHeaders(), signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error();
     return await r.json() as { tag_name: string; published_at: string }[];
   }, []);
@@ -45,7 +45,7 @@ export async function githubEvidence(e: Entity): Promise<Evidence> {
 
   const tree = await safe(async () => {
     const branch = e.default_branch ?? "main";
-    const r = await fetch(`${GH}/repos/${full}/git/trees/${branch}?recursive=1`, { headers: ghHeaders() });
+    const r = await fetch(`${GH}/repos/${full}/git/trees/${branch}?recursive=1`, { headers: ghHeaders(), signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error();
     return (await r.json() as { tree: { path: string }[] }).tree.map((t) => t.path);
   }, [] as string[]);
@@ -53,7 +53,7 @@ export async function githubEvidence(e: Entity): Promise<Evidence> {
   if (tree.length) { grid.push({ label: "Tests / CI", value: `${hasTests ? "tests" : "no tests"} · ${hasCI ? "CI" : "no CI"}` }); ctx.hasTests = hasTests; ctx.hasCI = hasCI; }
 
   const readme = await safe(async () => {
-    const r = await fetch(`${GH}/repos/${full}/readme`, { headers: { ...ghHeaders(), "Accept": "application/vnd.github.raw" } });
+    const r = await fetch(`${GH}/repos/${full}/readme`, { headers: { ...ghHeaders(), "Accept": "application/vnd.github.raw" }, signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error();
     return (await r.text()).slice(0, 6000);
   }, "");

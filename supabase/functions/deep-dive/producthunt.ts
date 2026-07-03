@@ -13,7 +13,7 @@ export async function productHuntEvidence(e: Entity): Promise<Evidence> {
   const productUrl = (raw["website"] as string) ?? null;
   // URL-alive (veto signal)
   const alive = productUrl ? await safe(async () => {
-    const r = await fetch(productUrl, { method: "GET", redirect: "follow" });
+    const r = await fetch(productUrl, { method: "GET", redirect: "follow", signal: AbortSignal.timeout(8000) });
     return r.ok;
   }, false) : false;
   grid.push({ label: "URL alive", value: alive ? "Yes" : "No" });
@@ -22,7 +22,7 @@ export async function productHuntEvidence(e: Entity): Promise<Evidence> {
 
   // pricing detected (crawl product page)
   if (productUrl && alive) {
-    const html = await safe(async () => (await fetch(productUrl)).text(), "");
+    const html = await safe(async () => (await fetch(productUrl, { signal: AbortSignal.timeout(8000) })).text(), "");
     const pricing = /\$\d|\bpricing\b|\bper month\b|\/mo\b|per seat/i.test(html);
     grid.push({ label: "Pricing", value: pricing ? "detected" : "none" });
     ctx.pricing_detected = pricing;

@@ -39,6 +39,55 @@ export function promptFor(ev: Evidence, e: Entity): string {
   ].join("\n\n");
 }
 
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === "object" && x !== null && !Array.isArray(x);
+}
+
+// Runtime guard for the model's tool_use input — the Anthropic tool_choice
+// schema constrains what a well-behaved model *should* send, but nothing
+// stops a misbehaving model/gateway from returning something else shaped.
+// Validate before it gets written into deep_dive_cache. Note: this validates
+// the model's own output only — "evidence" (the supporting-signals grid) is
+// attached by the caller from deterministic evidence collection, not by the
+// model, so it's intentionally not part of this shape.
+export function validateResult(x: unknown): Omit<EvalResult, "evidence"> {
+  const bad = (what: string): never => {
+    throw new Error(`model returned malformed evaluation: ${what}`);
+  };
+  if (!isRecord(x)) return bad("not an object");
+
+  const { score, verdict, vetoes, reasons, rubric } = x;
+
+  if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100) {
+    return bad("score must be a number 0-100");
+  }
+  if (typeof verdict !== "string" || verdict.trim().length === 0) {
+    return bad("verdict must be a non-empty string");
+  }
+  if (!Array.isArray(vetoes)) {
+    return bad("vetoes must be an array");
+  }
+  if (!Array.isArray(reasons) || reasons.length < 2 || reasons.length > 3) {
+    return bad("reasons must be an array of length 2-3");
+  }
+  if (!Array.isArray(rubric) || rubric.length === 0) {
+    return bad("rubric must be a non-empty array");
+  }
+  for (const [i, row] of rubric.entries()) {
+    if (
+      !isRecord(row) ||
+      typeof row.label !== "string" ||
+      typeof row.score !== "number" ||
+      typeof row.state !== "string" ||
+      typeof row.evidence !== "string"
+    ) {
+      return bad(`rubric[${i}] must have label/score/state/evidence`);
+    }
+  }
+
+  return { score, verdict, vetoes, reasons, rubric } as Omit<EvalResult, "evidence">;
+}
+
 export async function evaluate(ev: Evidence, e: Entity): Promise<EvalResult> {
   // Provider is a setting: key + optional reseller/proxy base URL + optional model override.
   // Lets the caller point at the user's shopaikey (or any Anthropic-compatible) proxy
@@ -58,7 +107,7 @@ export async function evaluate(ev: Evidence, e: Entity): Promise<EvalResult> {
   });
   const block = msg.content.find((b) => b.type === "tool_use") as Anthropic.ToolUseBlock | undefined;
   if (!block) throw new Error("model did not return submit_evaluation");
-  const out = block.input as Omit<EvalResult, "evidence">;
+  const out = validateResult(block.input);
   return { ...out, evidence: ev.grid }; // attach the supporting-signals grid for the overlay
 }
 

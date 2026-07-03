@@ -22,18 +22,23 @@ export async function getEntity(db: SupabaseClient, id: number): Promise<Entity>
 }
 
 export async function setRunning(db: SupabaseClient, id: number) {
-  await db.from("deep_dive_cache").upsert(
+  const { error } = await db.from("deep_dive_cache").upsert(
     { entity_id: id, status: "running", error_note: null, computed_at: new Date().toISOString() },
     { onConflict: "entity_id" });
+  if (error) throw new Error(`setRunning ${id}: ${error.message}`);
 }
 export async function writeResult(db: SupabaseClient, id: number, r: EvalResult) {
-  await db.from("deep_dive_cache").upsert({
+  const { error } = await db.from("deep_dive_cache").upsert({
     entity_id: id, status: "done", computed_at: new Date().toISOString(),
     quality_score: r.score, veto_flags: r.vetoes, reasons: r.reasons, full_result: r,
   }, { onConflict: "entity_id" });
+  if (error) throw new Error(`writeResult ${id}: ${error.message}`);
 }
 export async function writeError(db: SupabaseClient, id: number, msg: string) {
-  await db.from("deep_dive_cache").upsert(
+  // Best-effort: this is already the error path (called from index.ts's catch
+  // block), so a failure here must not throw — just let it be best-effort.
+  const { error } = await db.from("deep_dive_cache").upsert(
     { entity_id: id, status: "error", error_note: msg, computed_at: new Date().toISOString() },
     { onConflict: "entity_id" });
+  if (error) console.error(`writeError ${id}: failed to write error state: ${error.message}`);
 }

@@ -1,4 +1,5 @@
-"""Apply the signal_feed view + RLS policies. Run from repo root: python -m scripts.apply_phase1_db
+"""Apply the signal_feed view + RLS policies + authenticated-role grants.
+Run from repo root: python -m scripts.apply_phase1_db
 
 Idempotent: safe to re-run. Each statement commits (or rolls back) on its own so an
 "already exists" error on a later RLS statement can never discard the view created
@@ -25,19 +26,20 @@ with conn.cursor() as cur:
     cur.execute(Path("db/signal_feed.sql").read_text(encoding="utf-8"))
 conn.commit()
 
-for stmt in Path("db/rls.sql").read_text(encoding="utf-8").split(";"):
-    s = stmt.strip()
-    if not s or not _is_sql(s):
-        continue
-    try:
-        with conn.cursor() as cur:
-            cur.execute(s)
-        conn.commit()
-    except Exception as exc:
-        if "already exists" in str(exc):
-            conn.rollback()
+for sql_file in ("db/rls.sql", "db/grants.sql"):
+    for stmt in Path(sql_file).read_text(encoding="utf-8").split(";"):
+        s = stmt.strip()
+        if not s or not _is_sql(s):
             continue
-        raise
+        try:
+            with conn.cursor() as cur:
+                cur.execute(s)
+            conn.commit()
+        except Exception as exc:
+            if "already exists" in str(exc):
+                conn.rollback()
+                continue
+            raise
 
 conn.close()
 print("phase-1 db applied")

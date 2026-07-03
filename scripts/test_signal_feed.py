@@ -22,5 +22,47 @@ assert all(float(r[1]) == float(r[2]) for r in rows), "rank_score should equal p
 cur.execute("select rank_score from signal_feed order by rank_score desc limit 3")
 scores = [float(r[0]) for r in cur.fetchall()]
 assert scores == sorted(scores, reverse=True), "not orderable by rank_score"
+
+# --- authenticated-role checks -----------------------------------------
+# Everything above ran on the table-OWNER connection, which bypasses RLS
+# entirely — it proves the view's SQL is correct but proves nothing about
+# whether the app's actual runtime role (`authenticated`) can use it. The
+# owner can `set role authenticated` to simulate the app's runtime
+# permissions (RLS + GRANTs both apply once the role is switched).
+try:
+    cur.execute("set role authenticated")
+
+    try:
+        cur.execute("select count(*) from signal_feed")
+    except Exception as exc:
+        raise AssertionError(
+            f"authenticated role cannot read signal_feed (missing GRANT or RLS policy?): {exc}"
+        ) from exc
+    auth_n = cur.fetchone()[0]
+    assert auth_n > 0, "authenticated role read signal_feed but got 0 rows — RLS policy may be too restrictive"
+
+    cur.execute("select id from entities limit 1")
+    row = cur.fetchone()
+    assert row is not None, "no entities available to test watchlist write as authenticated"
+    entity_id = row[0]
+
+    try:
+        cur.execute(
+            "insert into watchlist_state (entity_id, state) values (%s, 'watching') "
+            "on conflict (entity_id) do update set state = excluded.state",
+            (entity_id,),
+        )
+        cur.execute("delete from watchlist_state where entity_id = %s", (entity_id,))
+    except Exception as exc:
+        raise AssertionError(
+            f"authenticated role cannot write watchlist_state (missing GRANT or RLS policy?): {exc}"
+        ) from exc
+finally:
+    # Discard the insert/delete test data and drop back to the owner role
+    # regardless of whether the checks above passed or raised.
+    conn.rollback()
+    cur.execute("reset role")
+
 conn.close()
 print(f"signal_feed OK — {n} rows, columns + cold-start + ordering verified")
+print(f"authenticated role OK — read {auth_n} rows via signal_feed, insert+delete on watchlist_state succeeded")

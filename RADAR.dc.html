@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#e6e4e0}
+  *{box-sizing:border-box}
+  button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+  ::-webkit-scrollbar{display:none;width:0;height:0}
+  *{scrollbar-width:none;-ms-overflow-style:none}
+  @keyframes radarSweep{to{transform:rotate(360deg)}}
+  @keyframes blipPulse{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.55);opacity:.12}}
+  @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.82)}}
+  @keyframes ddUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes ddDown{from{transform:translateY(0)}to{transform:translateY(100%)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes rowIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</helmet>
+<div style="min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;padding:28px 20px;position:relative;overflow:hidden;background:radial-gradient(1100px 760px at 50% -8%, #f4f3f1 0%, #edebe7 52%, #e5e3df 100%)">
+  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;opacity:.6;background:repeating-radial-gradient(circle at 50% 36%, rgba(0,0,0,.022) 0 1px, transparent 1px 96px)"></div>
+
+  <x-import component-from-global-scope="IOSDevice" from="./frames/ios-frame.jsx" dark="{{ false }}" hint-size="402px,874px" style="position:relative;z-index:1;flex-shrink:0;box-shadow:0 40px 90px rgba(20,22,30,.17), 0 8px 24px rgba(20,22,30,.08)">
+
+    <div style="height:100%;display:flex;flex-direction:column;position:relative;overflow:hidden;background:#f6f5f4;color:#1a1a1a;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+
+      <!-- ===================== HEADER ===================== -->
+      <div style="flex-shrink:0;padding:56px 18px 12px;background:#ffffff;border-bottom:1px solid #e6e6e6;position:relative;z-index:5">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:9px">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10.5" stroke="{{ accent }}" stroke-opacity=".22" stroke-width="1.2"></circle>
+              <circle cx="12" cy="12" r="6.5" stroke="{{ accent }}" stroke-opacity=".38" stroke-width="1.2"></circle>
+              <g style="transform-origin:12px 12px;animation:radarSweep 4.6s linear infinite">
+                <path d="M12 12 L12 1.5 A10.5 10.5 0 0 1 21 7 Z" fill="{{ accent }}" fill-opacity=".16"></path>
+                <line x1="12" y1="12" x2="12" y2="1.5" stroke="{{ accent }}" stroke-width="1.6"></line>
+              </g>
+              <circle cx="12" cy="12" r="2" fill="{{ accent }}"></circle>
+            </svg>
+            <div style="font-weight:700;font-size:18px;letter-spacing:.14em;color:#1a1a1a">RADAR</div>
+          </div>
+          <button onClick="{{ onRefresh }}" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6e6e6;background:#ffffff;color:#615d59;display:flex;align-items:center;justify-content:center;cursor:pointer">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="{{ refreshSpin }}"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+          <span style="width:6px;height:6px;border-radius:50%;background:{{ liveDot }};box-shadow:0 0 7px {{ liveGlow }};animation:livePulse 2.4s ease-in-out infinite"></span>
+          <span style="font-size:10.5px;letter-spacing:.13em;color:#a39e98;white-space:nowrap;font-weight:600">AS OF</span>
+          <span style="font-size:11.5px;letter-spacing:-.01em;color:#615d59;white-space:nowrap">{{ asOf }}</span>
+          <span style="flex:1"></span>
+          <span style="font-size:10.5px;letter-spacing:.04em;color:#a39e98;white-space:nowrap;font-weight:500">{{ countLabel }}</span>
+        </div>
+      </div>
+
+      <!-- ===================== BODY ===================== -->
+      <div style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch">
+
+        <!-- ---------- FEED / WATCHLIST ---------- -->
+        <sc-if value="{{ showList }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:14px 18px 120px">
+
+          <sc-if value="{{ showWatchTitle }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:26px;font-weight:700;letter-spacing:-.025em;color:#1a1a1a;margin:2px 0 14px">Watchlist</div>
+          </sc-if>
+
+          <div style="display:flex;gap:4px;padding:4px;border-radius:11px;border:1px solid #e6e6e6;background:#ffffff;margin-bottom:11px">
+            <sc-for list="{{ sourceSeg }}" as="s" hint-placeholder-count="3">
+              <button onClick="{{ s.onClick }}" style="{{ s.style }}">{{ s.label }}</button>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:7px;overflow-x:auto;padding:2px 0 12px;margin:0 -18px;padding-left:18px;padding-right:18px">
+            <button onClick="{{ onCycleSort }}" style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid #e6e6e6;background:#ffffff;color:#31302e;font-size:12.5px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;cursor:pointer;flex-shrink:0">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2v8M3 10l-2-2M3 10l2-2M9 10V2M9 2L7 4M9 2l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              {{ sortLabel }}
+            </button>
+            <span style="width:1px;height:18px;background:#e6e6e6;flex-shrink:0"></span>
+            <sc-for list="{{ stageChips }}" as="c" hint-placeholder-count="5">
+              <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+            </sc-for>
+            <span style="width:1px;height:18px;background:#e6e6e6;flex-shrink:0"></span>
+            <sc-for list="{{ langChips }}" as="c" hint-placeholder-count="4">
+              <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ showWatchTitle }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:7px;margin-bottom:12px">
+              <sc-for list="{{ watchChips }}" as="c" hint-placeholder-count="4">
+                <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ visible }}" as="it" hint-placeholder-count="6">
+              <div onClick="{{ it.onOpen }}" style="{{ it.rowStyle }}" style-hover="{{ it.rowHover }}" style-active="{{ it.rowActive }}">
+                <div style="display:flex;align-items:flex-start;gap:11px">
+                  <span style="{{ it.srcWrap }}">
+                    <sc-if value="{{ it.isGithub }}" hint-placeholder-val="{{ false }}">
+                      <svg width="19" height="19" viewBox="0 0 24 24"><path fill="#1a1a1a" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{ it.isPH }}" hint-placeholder-val="{{ false }}">
+                      <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#DA552F" d="M13.604 8.4h-3.405V12h3.405c.995 0 1.801-.806 1.801-1.801 0-.993-.805-1.799-1.801-1.799zM12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm1.604 14.4h-3.405V18H7.801V6h5.803c2.319 0 4.199 1.88 4.199 4.199 0 2.321-1.88 4.201-4.199 4.201z"></path></svg>
+                    </sc-if>
+                  </span>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+                      <span style="font-size:11px;color:#a39e98;letter-spacing:-.01em;white-space:nowrap">{{ it.owner }}</span>
+                      <span style="font-size:15.5px;font-weight:600;color:#1a1a1a;letter-spacing:-.02em">{{ it.name }}</span>
+                      <sc-if value="{{ it.stateTag.show }}" hint-placeholder-val="{{ false }}"><span style="{{ it.stateTag.style }}">{{ it.stateTag.label }}</span></sc-if>
+                    </div>
+                    <div style="font-size:13px;line-height:1.45;color:#615d59;margin-top:3px;text-wrap:pretty">{{ it.oneLiner }}</div>
+                  </div>
+                  <button onClick="{{ it.onWatch }}" style="{{ it.watchBtnStyle }}">
+                    <sc-if value="{{ it.isWatching }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3.1L3 14V3a1 1 0 0 1 1-1z"></path></svg></sc-if>
+                    <sc-if value="{{ it.notWatching }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3.1L3 14V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path></svg></sc-if>
+                  </button>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:9px">
+                  <sc-for list="{{ it.tags }}" as="t" hint-placeholder-count="3">
+                    <span style="font-size:10.5px;letter-spacing:0;color:#615d59;background:#f2f1ef;border-radius:5px;padding:3px 7px">{{ t }}</span>
+                  </sc-for>
+                </div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:12px;gap:10px">
+                  <div style="min-width:0">
+                    <div style="display:flex;align-items:baseline;gap:6px">
+                      <span style="{{ it.primaryStyle }}">{{ it.primary }}</span>
+                      <span style="font-size:11px;color:#a39e98;white-space:nowrap;flex-shrink:0">{{ it.primaryUnit }}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                      <span style="display:inline-flex;align-items:center;gap:5px"><span style="{{ it.consDot }}"></span><span style="{{ it.consLabelStyle }}">{{ it.consLabel }}</span></span>
+                      <span style="color:#d4d2ce">·</span>
+                      <span style="font-size:11px;color:#a39e98;white-space:nowrap">{{ it.secondary }} {{ it.secondaryUnit }}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0">
+                    <span style="{{ it.stagePill }}"><span style="font-size:11px">{{ it.stageArrow }}</span>{{ it.stageLabel }}</span>
+                    <span style="font-size:10.5px;color:#a39e98;white-space:nowrap">{{ it.lastActive }}</span>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:60px 20px;color:#a39e98">
+              <div style="font-size:13px;letter-spacing:.02em">No signals match this filter.</div>
+            </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <!-- ---------- SCOPE ---------- -->
+        <sc-if value="{{ showScope }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:16px 18px 120px">
+          <div style="font-size:27px;font-weight:700;letter-spacing:-.03em;color:#1a1a1a;margin:2px 0 4px">The Scope</div>
+          <div style="font-size:13.5px;line-height:1.5;color:#615d59;margin-bottom:16px">Every signal plotted by quality and momentum. The <span style="color:{{ green }};font-weight:600">sweet spot</span> is top-right — genuinely good, still emerging.</div>
+
+          <div style="position:relative;width:100%;aspect-ratio:1;border-radius:16px;background:#213183;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px rgba(33,49,131,.18)">
+            <svg viewBox="0 0 300 300" style="position:absolute;inset:0;width:100%;height:100%">
+              <circle cx="150" cy="150" r="140" fill="none" stroke="{{ ringStroke }}"></circle>
+              <circle cx="150" cy="150" r="104" fill="none" stroke="{{ ringStroke }}"></circle>
+              <circle cx="150" cy="150" r="66" fill="none" stroke="{{ ringStroke }}"></circle>
+              <circle cx="150" cy="150" r="28" fill="none" stroke="{{ ringStroke }}"></circle>
+              <line x1="150" y1="10" x2="150" y2="290" stroke="{{ gridStroke }}" stroke-dasharray="2 4"></line>
+              <line x1="10" y1="150" x2="290" y2="150" stroke="{{ gridStroke }}" stroke-dasharray="2 4"></line>
+            </svg>
+            <div style="position:absolute;left:50%;top:0;right:0;height:50%;background:linear-gradient(215deg, {{ spotGlow }} 0%, transparent 68%);border-left:1px dashed {{ spotBorder }};border-bottom:1px dashed {{ spotBorder }};pointer-events:none"></div>
+            <div style="position:absolute;right:12px;top:11px;font-size:9px;letter-spacing:.14em;color:{{ spotText }};font-weight:600;pointer-events:none">SWEET SPOT</div>
+            <sc-if value="{{ sweepOn }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;inset:0;border-radius:16px;pointer-events:none;transform-origin:50% 50%;animation:radarSweep 6.5s linear infinite;background:conic-gradient(from 0deg, {{ sweepTint }} 0deg, transparent 44deg 360deg)"></div>
+            </sc-if>
+            <div style="position:absolute;left:10px;bottom:9px;font-size:8.5px;letter-spacing:.1em;color:{{ axisColor }};pointer-events:none">QUALITY →</div>
+            <div style="position:absolute;left:10px;top:9px;font-size:8.5px;letter-spacing:.1em;color:{{ axisColor }};pointer-events:none">MOMENTUM ↑</div>
+            <sc-for list="{{ blips }}" as="b" hint-placeholder-count="12">
+              <button onClick="{{ b.onClick }}" style="{{ b.wrapStyle }}" title="{{ b.name }}">
+                <span style="{{ b.dotStyle }}"></span>
+                <sc-if value="{{ b.pulse }}" hint-placeholder-val="{{ false }}"><span style="{{ b.pulseStyle }}"></span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="margin-top:18px;display:flex;flex-direction:column">
+            <div style="font-size:10.5px;letter-spacing:.1em;color:#a39e98;font-weight:600;margin-bottom:8px">RANKED BY MOMENTUM</div>
+            <sc-for list="{{ visible }}" as="it" hint-placeholder-count="6">
+              <button onClick="{{ it.onOpen }}" style="display:flex;align-items:center;gap:11px;padding:9px 4px;background:none;border:none;border-bottom:1px solid #ececea;cursor:pointer;text-align:left;width:100%">
+                <span style="{{ it.rankStyle }}">{{ it.rank }}</span>
+                <span style="{{ it.legendDot }}"></span>
+                <span style="flex:1;min-width:0;display:flex;flex-direction:column">
+                  <span style="font-size:13.5px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em">{{ it.name }}</span>
+                  <span style="font-size:10.5px;color:#a39e98">Quality {{ it.quality }} · Momentum {{ it.momentumPos }}</span>
+                </span>
+                <span style="{{ it.stagePillSm }}">{{ it.stageLabel }}</span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+      </div>
+
+      <!-- ===================== TAB BAR ===================== -->
+      <div style="flex-shrink:0;position:relative;z-index:6;padding:9px 26px 24px;background:#ffffff;border-top:1px solid #e6e6e6;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -1px 4px rgba(0,0,0,.02)">
+        <button onClick="{{ onFeed }}" style="{{ tabFeed }}">
+          <svg width="21" height="21" viewBox="0 0 22 22" fill="none"><path d="M3 5.5h16M3 11h16M3 16.5h11" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
+          <span style="font-size:10px;letter-spacing:.02em;font-weight:600">Feed</span>
+        </button>
+        <button onClick="{{ onScope }}" style="{{ tabScope }}">
+          <svg width="21" height="21" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8.2" stroke="currentColor" stroke-width="1.6"></circle><circle cx="11" cy="11" r="3.6" stroke="currentColor" stroke-width="1.6"></circle><circle cx="11" cy="11" r="1" fill="currentColor"></circle></svg>
+          <span style="font-size:10px;letter-spacing:.02em;font-weight:600">Scope</span>
+        </button>
+        <button onClick="{{ onWatchTab }}" style="{{ tabWatch }}">
+          <span style="position:relative;display:flex">
+            <svg width="21" height="21" viewBox="0 0 22 22" fill="none"><path d="M6 3.5h10a1 1 0 0 1 1 1v14l-6-3.7L5 18.5v-14a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+            <sc-if value="{{ hasWatch }}" hint-placeholder-val="{{ false }}"><span style="{{ watchBadge }}">{{ watchCount }}</span></sc-if>
+          </span>
+          <span style="font-size:10px;letter-spacing:.02em;font-weight:600">Watchlist</span>
+        </button>
+      </div>
+
+      <!-- ===================== DEEP-DIVE ===================== -->
+      <sc-if value="{{ sel }}" hint-placeholder-val="{{ false }}">
+      <div style="{{ overlayStyle }}">
+        <div style="height:100%;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;background:#f6f5f4">
+
+          <div style="position:sticky;top:0;z-index:4;display:flex;align-items:center;justify-content:space-between;padding:54px 16px 12px;background:rgba(255,255,255,.9);backdrop-filter:blur(12px);border-bottom:1px solid #e6e6e6">
+            <button onClick="{{ onClose }}" style="display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 13px 0 9px;border-radius:8px;border:1px solid #e6e6e6;background:#ffffff;color:#31302e;font-size:12.5px;font-weight:600;cursor:pointer">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              Back
+            </button>
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="{{ sel.srcWrap }}">
+                <sc-if value="{{ sel.isGithub }}" hint-placeholder-val="{{ false }}"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="#1a1a1a" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg></sc-if>
+                <sc-if value="{{ sel.isPH }}" hint-placeholder-val="{{ false }}"><svg width="23" height="23" viewBox="0 0 24 24"><path fill="#DA552F" d="M13.604 8.4h-3.405V12h3.405c.995 0 1.801-.806 1.801-1.801 0-.993-.805-1.799-1.801-1.799zM12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm1.604 14.4h-3.405V18H7.801V6h5.803c2.319 0 4.199 1.88 4.199 4.199 0 2.321-1.88 4.201-4.199 4.201z"></path></svg></sc-if>
+              </span>
+              <button onClick="{{ sel.onWatch }}" style="{{ sel.watchBtnStyleLg }}">
+                <sc-if value="{{ sel.isWatching }}" hint-placeholder-val="{{ false }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3.1L3 14V3a1 1 0 0 1 1-1z"></path></svg></sc-if>
+                <sc-if value="{{ sel.notWatching }}" hint-placeholder-val="{{ true }}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 2h8a1 1 0 0 1 1 1v11l-5-3.1L3 14V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path></svg></sc-if>
+              </button>
+              <a href="{{ sel.link }}" target="_blank" style="width:34px;height:34px;border-radius:8px;border:1px solid #e6e6e6;background:#ffffff;color:#615d59;display:flex;align-items:center;justify-content:center;text-decoration:none">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2H2v10h10V9M8 2h4v4M12 2L6 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </a>
+            </div>
+          </div>
+
+          <div style="padding:18px 18px 120px">
+            <div style="font-size:11px;color:#a39e98;letter-spacing:-.01em">{{ sel.owner }}</div>
+            <div style="font-size:27px;font-weight:700;letter-spacing:-.03em;color:#1a1a1a;margin-top:2px">{{ sel.name }}</div>
+            <div style="font-size:15px;line-height:1.5;color:#31302e;margin-top:7px;text-wrap:pretty">{{ sel.oneLiner }}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center">
+              <sc-for list="{{ sel.tags }}" as="t" hint-placeholder-count="3">
+                <span style="font-size:11px;letter-spacing:0;color:#615d59;background:#eeedeb;border-radius:5px;padding:3px 8px">{{ t }}</span>
+              </sc-for>
+              <span style="font-size:11px;color:#a39e98;padding:3px 2px">{{ sel.age }} · {{ sel.lastActive }}</span>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-top:18px">
+              <div style="flex:1;background:#ffffff;border:1px solid #e6e6e6;border-radius:14px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;box-shadow:0 1px 2px rgba(0,0,0,.03)">
+                <div style="font-size:9.5px;letter-spacing:.1em;color:#a39e98;font-weight:600">{{ sel.scoreLabel }}</div>
+                <div style="position:relative;width:126px;height:126px;margin:8px 0 4px">
+                  <svg viewBox="0 0 120 120" style="position:absolute;inset:0;width:100%;height:100%">
+                    <circle cx="60" cy="60" r="58" fill="none" stroke="#efeeec" stroke-width="1"></circle>
+                    <circle cx="60" cy="60" r="44" fill="none" stroke="#f2f1ef" stroke-width="1"></circle>
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="#ececea" stroke-width="8"></circle>
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="{{ sel.ringColor }}" stroke-width="8" stroke-linecap="round" stroke-dasharray="{{ sel.ringLen }}" stroke-dashoffset="{{ sel.ringOff }}" style="transform:rotate(-90deg);transform-origin:60px 60px;filter:drop-shadow(0 0 5px {{ sel.ringGlow }})"></circle>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                    <span style="font-size:40px;font-weight:700;line-height:1;color:#1a1a1a;letter-spacing:-.03em">{{ sel.score }}</span>
+                    <span style="font-size:10.5px;color:#a39e98;margin-top:2px">/ 100</span>
+                  </div>
+                </div>
+                <div style="font-size:12px;line-height:1.4;color:#31302e;text-align:center;text-wrap:pretty;margin-top:2px">{{ sel.verdict }}</div>
+              </div>
+
+              <div style="flex:1;background:#ffffff;border:1px solid #e6e6e6;border-radius:14px;padding:14px 12px;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,.03)">
+                <div style="font-size:9.5px;letter-spacing:.09em;color:#a39e98;font-weight:600;margin-bottom:8px">QUALITY × MOMENTUM</div>
+                <div style="position:relative;flex:1;min-height:104px;border-radius:10px;border:1px solid #ececea;background:#faf9f8;overflow:hidden">
+                  <div style="position:absolute;left:50%;top:0;right:0;height:50%;background:{{ qSpotBg }};border-left:1px dashed {{ qSpotBorder }};border-bottom:1px dashed {{ qSpotBorder }}"></div>
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"><line x1="50" y1="0" x2="50" y2="100" stroke="#e6e6e6" stroke-dasharray="2 3"></line><line x1="0" y1="50" x2="100" y2="50" stroke="#e6e6e6" stroke-dasharray="2 3"></line></svg>
+                  <span style="{{ sel.qBlip }}"></span>
+                </div>
+                <div style="{{ sel.targetTag }}">{{ sel.targetLabel }}</div>
+              </div>
+            </div>
+
+            <sc-if value="{{ sel.hasVeto }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ sel.vetoes }}" as="v" hint-placeholder-count="1">
+                  <div style="display:flex;gap:11px;padding:13px 14px;border-radius:10px;border:1px solid rgba(224,62,62,.28);background:rgba(224,62,62,.055)">
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="flex-shrink:0;margin-top:1px"><path d="M9 1.5L16.5 15h-15L9 1.5z" stroke="#e03e3e" stroke-width="1.5" stroke-linejoin="round"></path><path d="M9 6.5v3.2M9 12.2v.1" stroke="#e03e3e" stroke-width="1.7" stroke-linecap="round"></path></svg>
+                    <div>
+                      <div style="font-size:10px;letter-spacing:.06em;color:#e03e3e;font-weight:700">VETO — {{ v.title }}</div>
+                      <div style="font-size:13px;line-height:1.45;color:#31302e;margin-top:4px">{{ v.note }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <div style="margin-top:22px">
+              <div style="font-size:10.5px;letter-spacing:.1em;color:#a39e98;font-weight:600;margin-bottom:11px">WHY THIS SCORE</div>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <sc-for list="{{ sel.reasons }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex;gap:11px">
+                    <span style="{{ r.dotStyle }}"></span>
+                    <div style="flex:1">
+                      <div style="font-size:14px;font-weight:600;color:#1a1a1a;line-height:1.35;letter-spacing:-.01em">{{ r.title }}</div>
+                      <div style="font-size:13px;line-height:1.45;color:#615d59;margin-top:2px;text-wrap:pretty">{{ r.note }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="margin-top:24px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+                <div style="font-size:10.5px;letter-spacing:.1em;color:#a39e98;font-weight:600">{{ sel.rubricTitle }}</div>
+                <div style="font-size:11px;color:#a39e98;font-style:italic">{{ sel.rubricLens }}</div>
+              </div>
+              <div style="border-radius:12px;overflow:hidden;border:1px solid #e6e6e6;background:#ffffff">
+                <sc-for list="{{ sel.rubric }}" as="r" hint-placeholder-count="7">
+                  <div style="padding:12px 14px;border-bottom:1px solid #f0efed">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                      <span style="font-size:13.5px;font-weight:500;color:#1a1a1a;letter-spacing:-.01em">{{ r.label }}</span>
+                      <span style="display:inline-flex;align-items:center;gap:8px;flex-shrink:0">
+                        <span style="width:52px;height:5px;border-radius:3px;background:#ededec;overflow:hidden;position:relative"><span style="{{ r.barStyle }}"></span></span>
+                        <span style="{{ r.scoreStyle }}">{{ r.scoreText }}</span>
+                      </span>
+                    </div>
+                    <div style="font-size:11.5px;line-height:1.4;color:#615d59;margin-top:5px;text-wrap:pretty">{{ r.evidence }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="margin-top:24px">
+              <div style="font-size:10.5px;letter-spacing:.1em;color:#a39e98;font-weight:600;margin-bottom:11px">{{ sel.evidenceTitle }}</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+                <sc-for list="{{ sel.evidence }}" as="e" hint-placeholder-count="6">
+                  <div style="padding:11px 13px;border-radius:12px;border:1px solid #e6e6e6;background:#ffffff">
+                    <div style="font-size:9px;letter-spacing:.06em;color:#a39e98;text-transform:uppercase;font-weight:600">{{ e.label }}</div>
+                    <div style="display:flex;align-items:baseline;gap:6px;margin-top:5px">
+                      <span style="{{ e.valueStyle }}">{{ e.value }}</span>
+                      <sc-if value="{{ e.sub }}" hint-placeholder-val="{{ false }}"><span style="font-size:10.5px;color:#a39e98">{{ e.sub }}</span></sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e6e6e6;display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="font-size:11px;color:#a39e98;line-height:1.5">Evaluated {{ sel.computedAt }}<br>Cached · re-runnable</div>
+              <button onClick="{{ onRerun }}" style="display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 15px;border-radius:8px;border:1px solid #e6e6e6;background:#ffffff;color:#31302e;font-size:12.5px;font-weight:600;cursor:pointer">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none" style="{{ rerunSpin }}"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2v3h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                {{ rerunLabel }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: { &quot;width&quot;: 442, &quot;height&quot;: 902 },
+  &quot;accent&quot;: { &quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#0075de&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Radar&quot;, &quot;options&quot;: [&quot;#0075de&quot;, &quot;#213183&quot;, &quot;#2a9d99&quot;, &quot;#1aae39&quot;] },
+  &quot;defaultView&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;feed&quot;, &quot;options&quot;: [&quot;feed&quot;, &quot;scope&quot;, &quot;watchlist&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Radar&quot; },
+  &quot;density&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;comfortable&quot;, &quot;options&quot;: [&quot;comfortable&quot;, &quot;compact&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Radar&quot; },
+  &quot;sweep&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Radar&quot; }
+}">
+class Component extends DCLogic {
+  INK = '#1a1a1a'; INK2 = '#31302e'; MUT = '#615d59'; FAINT = '#a39e98';
+  CANVAS = '#f6f5f4'; SURF = '#ffffff'; HAIR = '#e6e6e6';
+  GREEN = '#1aae39'; TEAL = '#2a9d99'; ORANGE = '#dd5b00'; RED = '#e03e3e'; SKY = '#62aef0'; INDIGO = '#213183';
+
+  state = {
+    view: this.props.defaultView || 'feed',
+    source: 'all', stage: 'all', lang: 'all', sortKey: 'momentum', watchFilter: 'all',
+    watch: { fern: 'watching', vecstream: 'watching', nanoserve: 'seen' },
+    selectedId: null, closing: false,
+    spinning: false, rerunning: false, recomputed: {},
+  };
+
+  hexA(hex, a) {
+    let h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const n = parseInt(h, 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  A() { return this.props.accent || '#0075de'; }
+
+  DATA() {
+    return [
+      { id:'driftdb', source:'github', owner:'quill-labs /', name:'driftdb',
+        oneLiner:'Embedded, versioned columnar store for real-time analytics.',
+        language:'Rust', topics:['database','analytics','embedded'],
+        stage:'emerging', momentum:94, primary:'+2,140', primaryUnit:'stars / wk',
+        secondary:'8.4k', secondaryUnit:'total', consistency:'corroborated',
+        age:'3mo old', lastActive:'pushed 40m ago', ageDays:96, totalNum:8400,
+        score:89, scoreLabel:'QUALITY SCORE', quality:89, momentumPos:83, link:'#',
+        verdict:'Adopt-worthy — and still early.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'Adoption is outpacing attention', note:'Crate installs and forks are climbing in lockstep with stars — real usage, not a bookmark spike.'},
+          {tone:'pos', title:'Healthy bus factor', note:'24 contributors with no single-author dominance; review load is distributed.'},
+          {tone:'warn', title:'Pre-1.0 — expect churn', note:'The API is still stabilising at v0.7. Adopt behind a thin abstraction.'},
+        ],
+        rubric:[
+          {label:'Adoption over attention', score:9, state:'pass', evidence:'fork:star 0.21 · crate downloads +38% MoM'},
+          {label:'Maintenance pulse', score:9, state:'pass', evidence:'median PR merge 14h · pushed 40m ago'},
+          {label:'Bus factor', score:8, state:'pass', evidence:'24 contributors · top author 31% of commits'},
+          {label:'Problem significance', score:9, state:'pass', evidence:'a real gap: versioned embedded OLAP'},
+          {label:'Code depth', score:8, state:'pass', evidence:'1.9k tests · CI green · fuzzing in place'},
+          {label:'Maturity', score:6, state:'watch', evidence:'v0.7 — pre-1.0 API churn expected'},
+          {label:'License fit', score:10, state:'pass', evidence:'Apache-2.0 — permissive, patent grant'},
+        ],
+        evidence:[
+          {label:'Contributors', value:'24'},
+          {label:'Latest release', value:'v0.7.2', sub:'5d'},
+          {label:'Release cadence', value:'~2 / mo'},
+          {label:'Tests / CI', value:'Yes', sub:'green'},
+          {label:'License', value:'Apache-2.0'},
+          {label:'Crate d/loads', value:'142k/mo', sub:'↑38%'},
+        ] },
+
+      { id:'fern', source:'github', owner:'ferrous-labs /', name:'fern',
+        oneLiner:'Type-safe API clients & SDKs, generated straight from your OpenAPI spec.',
+        language:'TypeScript', topics:['codegen','api','sdk'],
+        stage:'rising', momentum:86, primary:'+1,380', primaryUnit:'stars / wk',
+        secondary:'15.2k', secondaryUnit:'total', consistency:'corroborated',
+        age:'14mo old', lastActive:'pushed 3h ago', ageDays:420, totalNum:15200,
+        score:84, scoreLabel:'QUALITY SCORE', quality:84, momentumPos:71, link:'#',
+        verdict:'Strong core, widening adoption.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'Used in production, widely', note:'300+ public dependents and 210k npm downloads a month — attention is backed by usage.'},
+          {tone:'pos', title:'Tight maintenance loop', note:'Issues are triaged daily with a 6-hour median first response.'},
+          {tone:'warn', title:'The moat is DX, not tech', note:'A crowded space; differentiation rests on developer experience, which is copyable.'},
+        ],
+        rubric:[
+          {label:'Adoption over attention', score:8, state:'pass', evidence:'dependents 312 · downloads 210k/mo'},
+          {label:'Maintenance pulse', score:9, state:'pass', evidence:'issue first-response median 6h'},
+          {label:'Bus factor', score:7, state:'pass', evidence:'11 contributors, load spread'},
+          {label:'Problem significance', score:8, state:'pass', evidence:'SDK sprawl is a genuine cost'},
+          {label:'Code depth', score:8, state:'pass', evidence:'unit + typed e2e + CI'},
+          {label:'Maturity', score:8, state:'pass', evidence:'v3.4, semver-stable'},
+          {label:'License fit', score:9, state:'pass', evidence:'MIT'},
+        ],
+        evidence:[
+          {label:'Contributors', value:'11'},
+          {label:'Latest release', value:'v3.4.1', sub:'2d'},
+          {label:'Release cadence', value:'weekly'},
+          {label:'Tests / CI', value:'Yes', sub:'green'},
+          {label:'License', value:'MIT'},
+          {label:'npm d/loads', value:'210k/mo', sub:'↑12%'},
+        ] },
+
+      { id:'vecstream', source:'github', owner:'parity-io /', name:'vecstream',
+        oneLiner:'A streaming vector index that updates in place — no rebuilds.',
+        language:'Rust', topics:['vector-search','ml','database'],
+        stage:'emerging', momentum:83, primary:'+1,020', primaryUnit:'stars / wk',
+        secondary:'3.4k', secondaryUnit:'total', consistency:'corroborated',
+        age:'2mo old', lastActive:'pushed 6h ago', ageDays:62, totalNum:3400,
+        score:81, scoreLabel:'QUALITY SCORE', quality:81, momentumPos:76, link:'#',
+        verdict:'Early, credible, worth watching.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'Attacks a costly problem head-on', note:'In-place vector updates remove the expensive rebuild step that plagues RAG stacks.'},
+          {tone:'pos', title:'Reproducible benchmarks', note:'Public, runnable benchmarks — the performance claims check out.'},
+          {tone:'warn', title:'Tiny team', note:'Three core contributors; long-term sustainability is unproven.'},
+        ],
+        rubric:[
+          {label:'Adoption over attention', score:7, state:'pass', evidence:'downloads doubling MoM off a small base'},
+          {label:'Maintenance pulse', score:8, state:'pass', evidence:'pushed 6h ago, steady'},
+          {label:'Bus factor', score:5, state:'watch', evidence:'3 core contributors'},
+          {label:'Problem significance', score:9, state:'pass', evidence:'in-place updates matter for RAG'},
+          {label:'Code depth', score:8, state:'pass', evidence:'benchmarks + tests + CI'},
+          {label:'Maturity', score:5, state:'watch', evidence:'v0.3, pre-1.0'},
+          {label:'License fit', score:10, state:'pass', evidence:'Apache-2.0'},
+        ],
+        evidence:[
+          {label:'Contributors', value:'3'},
+          {label:'Latest release', value:'v0.3.1', sub:'8d'},
+          {label:'Release cadence', value:'~3 / mo'},
+          {label:'Tests / CI', value:'Yes', sub:'green'},
+          {label:'License', value:'Apache-2.0'},
+          {label:'Downloads', value:'22k/mo', sub:'↑96%'},
+        ] },
+
+      { id:'pixelmind', source:'ph', owner:'Product Hunt', name:'Pixelmind',
+        oneLiner:'Turn a sentence into an editable, production-ready UI mockup.',
+        language:'', topics:['design','ai','no-code'],
+        stage:'rising', momentum:79, primary:'1,450', primaryUnit:'votes + comments',
+        secondary:'1,240', secondaryUnit:'votes', consistency:'corroborated',
+        age:'launched 4d ago', lastActive:'#2 of the day', ageDays:4, totalNum:1240,
+        score:74, scoreLabel:'BUSINESS SCORE', quality:74, momentumPos:72, link:'#',
+        verdict:'Real demand, thin moat.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'A painkiller for early founders', note:'Replaces hours of mockup work — the comments describe concrete, recurring workflows.'},
+          {tone:'pos', title:'Willingness to pay is live', note:'Credit-based pricing with a $19/mo tier already converting.'},
+          {tone:'warn', title:'Clonable', note:'A generic model plus a prompt — the moat is execution, not defensible tech.'},
+        ],
+        rubric:[
+          {label:'Demand urgency', score:8, state:'pass', evidence:'painkiller — replaces hours of work'},
+          {label:'Willingness to pay', score:7, state:'pass', evidence:'credit pricing live · $19/mo tier'},
+          {label:'Moat / clone-risk', score:5, state:'watch', evidence:'thin — generic model + prompt'},
+          {label:'Distribution & traction', score:8, state:'pass', evidence:'#2 of the day · 1.2k votes d1'},
+          {label:'Feedback quality', score:7, state:'pass', evidence:'comments cite real use'},
+          {label:'Team fit', score:7, state:'pass', evidence:'prior design-tool exits'},
+        ],
+        evidence:[
+          {label:'Pricing', value:'$19/mo', sub:'detected'},
+          {label:'Sentiment', value:'82%', sub:'positive'},
+          {label:'URL alive', value:'Yes'},
+          {label:'Reviews', value:'4.6★', sub:'38'},
+          {label:'Comment depth', value:'High'},
+          {label:'Votes d1', value:'1,240'},
+        ] },
+
+      { id:'refold', source:'ph', owner:'Product Hunt', name:'Refold',
+        oneLiner:'Spaced repetition for engineering docs, runbooks, and RFCs.',
+        language:'', topics:['devtools','learning','productivity'],
+        stage:'emerging', momentum:74, primary:'760', primaryUnit:'votes + comments',
+        secondary:'640', secondaryUnit:'votes', consistency:'corroborated',
+        age:'launched 2d ago', lastActive:'niche, engaged', ageDays:2, totalNum:640,
+        score:76, scoreLabel:'BUSINESS SCORE', quality:76, momentumPos:68, link:'#',
+        verdict:'Small market, sharp wedge.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'Kills tribal-knowledge loss', note:'A painkiller for onboarding and the slow decay of internal docs — acute, recurring pain.'},
+          {tone:'pos', title:'Clear willingness to pay', note:'Priced by team seats; comments come from eng leads with budget.'},
+          {tone:'warn', title:'Narrow TAM', note:'The market is small and the expansion path beyond eng teams is unproven.'},
+        ],
+        rubric:[
+          {label:'Demand urgency', score:8, state:'pass', evidence:'onboarding pain is acute & recurring'},
+          {label:'Willingness to pay', score:8, state:'pass', evidence:'team seats $8/user/mo'},
+          {label:'Moat / clone-risk', score:6, state:'watch', evidence:'workflow lock-in, modest'},
+          {label:'Distribution & traction', score:6, state:'watch', evidence:'640 votes d1 · niche'},
+          {label:'Feedback quality', score:8, state:'pass', evidence:'detailed notes from eng leads'},
+          {label:'Team fit', score:7, state:'pass', evidence:'ex-devtools founders'},
+        ],
+        evidence:[
+          {label:'Pricing', value:'$8/user', sub:'detected'},
+          {label:'Sentiment', value:'88%', sub:'positive'},
+          {label:'URL alive', value:'Yes'},
+          {label:'Reviews', value:'4.8★', sub:'21'},
+          {label:'Comment depth', value:'High'},
+          {label:'Votes d1', value:'640'},
+        ] },
+
+      { id:'glimpse', source:'github', owner:'okra-systems /', name:'glimpse',
+        oneLiner:'A terminal dashboard for tracing distributed systems in real time.',
+        language:'Go', topics:['observability','cli','tracing'],
+        stage:'rising', momentum:66, primary:'+910', primaryUnit:'stars / wk',
+        secondary:'6.1k', secondaryUnit:'total', consistency:'mixed',
+        age:'7mo old', lastActive:'pushed 2d ago', ageDays:210, totalNum:6100,
+        score:76, scoreLabel:'QUALITY SCORE', quality:76, momentumPos:66, link:'#',
+        verdict:'Promising — watch the pulse.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'Fills a real on-call gap', note:'Terminal-native tracing is genuinely useful for engineers living in the shell.'},
+          {tone:'warn', title:'Cadence is slipping', note:'Commit frequency dropped over the last month — momentum may be softening.'},
+          {tone:'warn', title:'Single-vendor backing', note:'One company drives it; a bus-factor risk if priorities shift.'},
+        ],
+        rubric:[
+          {label:'Adoption over attention', score:7, state:'pass', evidence:'fork:star 0.14 · brew installs steady'},
+          {label:'Maintenance pulse', score:6, state:'watch', evidence:'pushed 2d ago · cadence dropped'},
+          {label:'Bus factor', score:5, state:'watch', evidence:'4 contributors, 1 dominant'},
+          {label:'Problem significance', score:8, state:'pass', evidence:'on-call tracing pain is real'},
+          {label:'Code depth', score:7, state:'pass', evidence:'tests present, CI green'},
+          {label:'Maturity', score:6, state:'watch', evidence:'v0.4'},
+          {label:'License fit', score:9, state:'pass', evidence:'MIT'},
+        ],
+        evidence:[
+          {label:'Contributors', value:'4'},
+          {label:'Latest release', value:'v0.4.0', sub:'3w'},
+          {label:'Release cadence', value:'irregular'},
+          {label:'Tests / CI', value:'Yes'},
+          {label:'License', value:'MIT'},
+          {label:'Brew installs', value:'18k/mo'},
+        ] },
+
+      { id:'cadence', source:'ph', owner:'Product Hunt', name:'Cadence',
+        oneLiner:'Meeting notes that sync straight into your CRM.',
+        language:'', topics:['sales','ai','productivity'],
+        stage:'steady', momentum:61, primary:'1,140', primaryUnit:'votes + comments',
+        secondary:'980', secondaryUnit:'votes', consistency:'corroborated',
+        age:'launched 5wk ago', lastActive:'MRR growing', ageDays:35, totalNum:980,
+        score:71, scoreLabel:'BUSINESS SCORE', quality:71, momentumPos:42, link:'#',
+        verdict:'Solid business, past the spike.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'A clear painkiller for sales', note:'Removes daily admin toil; CRM integration creates real switching cost.'},
+          {tone:'warn', title:'No longer emerging', note:'Momentum has settled into steady — the early-catch window has closed.'},
+          {tone:'pos', title:'Healthy monetisation', note:'Team-tier pricing with annual plans and a growing MRR signal.'},
+        ],
+        rubric:[
+          {label:'Demand urgency', score:8, state:'pass', evidence:'admin toil is a daily painkiller'},
+          {label:'Willingness to pay', score:8, state:'pass', evidence:'$29/seat · annual plans'},
+          {label:'Moat / clone-risk', score:6, state:'watch', evidence:'CRM integrations = switching cost'},
+          {label:'Distribution & traction', score:6, state:'watch', evidence:'steady, no longer viral'},
+          {label:'Feedback quality', score:7, state:'pass', evidence:'reviews cite time saved'},
+          {label:'Team fit', score:7, state:'pass', evidence:'domain-experienced'},
+        ],
+        evidence:[
+          {label:'Pricing', value:'$29/seat', sub:'detected'},
+          {label:'Sentiment', value:'79%', sub:'positive'},
+          {label:'URL alive', value:'Yes'},
+          {label:'Reviews', value:'4.5★', sub:'64'},
+          {label:'Comment depth', value:'Medium'},
+          {label:'MRR signal', value:'Growing'},
+        ] },
+
+      { id:'nanoserve', source:'github', owner:'hexbyte /', name:'nanoserve',
+        oneLiner:'A 9 kB HTTP server with zero dependencies.',
+        language:'Zig', topics:['http','server','minimal'],
+        stage:'steady', momentum:60, primary:'+240', primaryUnit:'stars / wk',
+        secondary:'12.9k', secondaryUnit:'total', consistency:'corroborated',
+        age:'2yr old', lastActive:'pushed 5d ago', ageDays:730, totalNum:12900,
+        score:79, scoreLabel:'QUALITY SCORE', quality:79, momentumPos:40, link:'#',
+        verdict:'High quality, past its spike.',
+        vetoes:[],
+        reasons:[
+          {tone:'pos', title:'Exceptional engineering', note:'Tiny, dependency-free, and fast — a textbook example of disciplined scope.'},
+          {tone:'warn', title:'Growth has plateaued', note:'Still excellent, but no longer emerging — outside the catch-early window.'},
+          {tone:'pos', title:'Two years of steady care', note:'Consistent maintenance and releases signal a project you can rely on.'},
+        ],
+        rubric:[
+          {label:'Adoption over attention', score:8, state:'pass', evidence:'used in embedded builds, steady installs'},
+          {label:'Maintenance pulse', score:8, state:'pass', evidence:'pushed 5d ago, consistent'},
+          {label:'Bus factor', score:6, state:'watch', evidence:'2 core maintainers'},
+          {label:'Problem significance', score:7, state:'pass', evidence:'minimal-footprint servers matter'},
+          {label:'Code depth', score:9, state:'pass', evidence:'exhaustive tests + CI + benchmarks'},
+          {label:'Maturity', score:9, state:'pass', evidence:'v2.1, stable'},
+          {label:'License fit', score:10, state:'pass', evidence:'MIT'},
+        ],
+        evidence:[
+          {label:'Contributors', value:'9'},
+          {label:'Latest release', value:'v2.1.0', sub:'5d'},
+          {label:'Release cadence', value:'monthly'},
+          {label:'Tests / CI', value:'Yes', sub:'green'},
+          {label:'License', value:'MIT'},
+          {label:'Binary size', value:'9 kB'},
+        ] },
+
+      { id:'starkit', source:'github', owner:'awesome-labs /', name:'starkit',
+        oneLiner:'One-click generator for “awesome-*” README lists.',
+        language:'Python', topics:['readme','generator','awesome'],
+        stage:'rising', momentum:48, primary:'+3,100', primaryUnit:'stars / wk',
+        secondary:'5.2k', secondaryUnit:'total', consistency:'suspicious',
+        age:'5wk old', lastActive:'pushed 9d ago', ageDays:35, totalNum:5200,
+        score:34, scoreLabel:'QUALITY SCORE', quality:34, momentumPos:79, link:'#',
+        verdict:'Vanity spike — thin substance.',
+        vetoes:[{title:'Metric integrity', note:'72% of new stars come from accounts under 30 days old with no other activity — a strong bought-star signal.'}],
+        reasons:[
+          {tone:'neg', title:'Attention without usage', note:'Star velocity is 6× fork and download growth — the classic vanity-spike shape.'},
+          {tone:'neg', title:'Thin surface area', note:'Roughly 400 lines wrapping tools that already exist; little original substance.'},
+          {tone:'warn', title:'No tests, one author', note:'Single contributor, no CI, sparse docs — fragile if attention fades.'},
+        ],
+        rubric:[
+          {label:'Adoption over attention', score:2, state:'fail', evidence:'stars ≫ forks/downloads — attention only'},
+          {label:'Maintenance pulse', score:5, state:'watch', evidence:'pushed 9d ago'},
+          {label:'Bus factor', score:2, state:'fail', evidence:'1 contributor'},
+          {label:'Problem significance', score:3, state:'fail', evidence:'nice-to-have, not a real pain'},
+          {label:'Code depth', score:2, state:'fail', evidence:'no tests, no CI'},
+          {label:'Maturity', score:3, state:'fail', evidence:'v0.1'},
+          {label:'License fit', score:8, state:'pass', evidence:'MIT'},
+        ],
+        evidence:[
+          {label:'Contributors', value:'1'},
+          {label:'Latest release', value:'—'},
+          {label:'Release cadence', value:'sporadic'},
+          {label:'Tests / CI', value:'No'},
+          {label:'License', value:'MIT'},
+          {label:'Stars <30d acct', value:'72%', sub:'flag'},
+        ] },
+
+      { id:'auravatar', source:'ph', owner:'Product Hunt', name:'Auravatar',
+        oneLiner:'Viral AI avatars in 30 seconds — 200+ styles.',
+        language:'', topics:['ai','photo','social'],
+        stage:'rising', momentum:44, primary:'2,690', primaryUnit:'votes + comments',
+        secondary:'2,600', secondaryUnit:'votes', consistency:'suspicious',
+        age:'launched 3d ago', lastActive:'spiky votes', ageDays:3, totalNum:2600,
+        score:38, scoreLabel:'BUSINESS SCORE', quality:38, momentumPos:81, link:'#',
+        verdict:'Big spike, shallow substance.',
+        vetoes:[],
+        reasons:[
+          {tone:'neg', title:'A vitamin, not a painkiller', note:'Novelty use with low repeat — the kind of thing tried once and abandoned.'},
+          {tone:'neg', title:'Comment depth is thin', note:'96% one-line congratulations; almost no evidence of real, repeat users.'},
+          {tone:'warn', title:'No pricing, no moat', note:'A commodity model behind a free virality play, with dozens of near-identical clones.'},
+        ],
+        rubric:[
+          {label:'Demand urgency', score:3, state:'fail', evidence:'novelty — low repeat, seasonal'},
+          {label:'Willingness to pay', score:3, state:'fail', evidence:'no pricing; free virality play'},
+          {label:'Moat / clone-risk', score:2, state:'fail', evidence:'commodity model, trivially cloned'},
+          {label:'Distribution & traction', score:8, state:'pass', evidence:'strong d1 votes, viral loop'},
+          {label:'Feedback quality', score:3, state:'fail', evidence:'congrats-spam, few real users'},
+          {label:'Team fit', score:5, state:'watch', evidence:'unknown, redacted'},
+        ],
+        evidence:[
+          {label:'Pricing', value:'None', sub:'detected'},
+          {label:'Sentiment', value:'61%', sub:'shallow'},
+          {label:'URL alive', value:'Yes'},
+          {label:'Reviews', value:'4.1★', sub:'12'},
+          {label:'Comment depth', value:'Low'},
+          {label:'Vote pattern', value:'Spiky'},
+        ] },
+
+      { id:'zapnotes', source:'ph', owner:'Product Hunt', name:'Zap Notes',
+        oneLiner:'AI notes that file themselves into the right place.',
+        language:'', topics:['productivity','notes','ai'],
+        stage:'fading', momentum:24, primary:'450', primaryUnit:'votes + comments',
+        secondary:'410', secondaryUnit:'votes', consistency:'mixed',
+        age:'launched 6d ago', lastActive:'offline', ageDays:6, totalNum:410,
+        score:29, scoreLabel:'BUSINESS SCORE', quality:45, momentumPos:26, link:'#',
+        verdict:'Cannot verify — product offline.',
+        vetoes:[{title:'Dead product URL', note:'The website returns HTTP 522 — the product appears offline six days after launch.'}],
+        reasons:[
+          {tone:'neg', title:'The product can’t be verified', note:'Its URL is unreachable, so there is no way to confirm the app even exists.'},
+          {tone:'warn', title:'Comments report failures', note:'Signup errors and missing features dominate the discussion.'},
+          {tone:'warn', title:'Already fading', note:'Momentum has dropped off sharply in the days since launch.'},
+        ],
+        rubric:[
+          {label:'Demand urgency', score:5, state:'watch', evidence:'notes triage is a real want'},
+          {label:'Willingness to pay', score:3, state:'fail', evidence:'no reachable pricing page'},
+          {label:'Moat / clone-risk', score:3, state:'fail', evidence:'undifferentiated'},
+          {label:'Distribution & traction', score:3, state:'fail', evidence:'URL dead — funnel broken'},
+          {label:'Feedback quality', score:4, state:'fail', evidence:'complaints dominate'},
+          {label:'Team fit', score:4, state:'watch', evidence:'unresponsive to comments'},
+        ],
+        evidence:[
+          {label:'Pricing', value:'Unknown'},
+          {label:'Sentiment', value:'39%', sub:'positive'},
+          {label:'URL alive', value:'No', sub:'522'},
+          {label:'Reviews', value:'2.9★', sub:'17'},
+          {label:'Comment depth', value:'Medium'},
+          {label:'Status', value:'Offline'},
+        ] },
+
+      { id:'legacyhttp', source:'github', owner:'rmartin /', name:'legacyhttp',
+        oneLiner:'An async web framework for Ruby.',
+        language:'Ruby', topics:['web','framework','http'],
+        stage:'fading', momentum:19, primary:'+15', primaryUnit:'stars / wk',
+        secondary:'9.8k', secondaryUnit:'total', consistency:'corroborated',
+        age:'6yr old', lastActive:'archived 8mo ago', ageDays:2200, totalNum:9800,
+        score:41, scoreLabel:'QUALITY SCORE', quality:58, momentumPos:16, link:'#',
+        verdict:'Historically solid, now archived.',
+        vetoes:[{title:'Archived repository', note:'Marked read-only by the maintainer eight months ago — no security patches will be issued.'}],
+        reasons:[
+          {tone:'neg', title:'Archived and unmaintained', note:'No further maintenance or security response — a hard disqualifier for adoption.'},
+          {tone:'warn', title:'The ecosystem moved on', note:'Async-native successors now solve this problem better.'},
+          {tone:'pos', title:'The code itself is clean', note:'A strong historical test suite — its past quality is not in question.'},
+        ],
+        rubric:[
+          {label:'Adoption over attention', score:6, state:'watch', evidence:'9.8k stars but usage declining'},
+          {label:'Maintenance pulse', score:1, state:'fail', evidence:'archived · last commit 8mo ago'},
+          {label:'Bus factor', score:2, state:'fail', evidence:'sole maintainer stepped away'},
+          {label:'Problem significance', score:5, state:'watch', evidence:'solved better elsewhere now'},
+          {label:'Code depth', score:8, state:'pass', evidence:'strong historical test suite'},
+          {label:'Maturity', score:9, state:'pass', evidence:'battle-tested, mature'},
+          {label:'License fit', score:9, state:'pass', evidence:'MIT'},
+        ],
+        evidence:[
+          {label:'Contributors', value:'38'},
+          {label:'Latest release', value:'v4.2.0', sub:'14mo'},
+          {label:'Release cadence', value:'none'},
+          {label:'Tests / CI', value:'Yes'},
+          {label:'License', value:'MIT'},
+          {label:'Status', value:'Archived', sub:'flag'},
+        ] },
+    ];
+  }
+
+  stageMeta(s) {
+    return ({
+      emerging: { label:'Emerging', arrow:'↑', color:this.GREEN },
+      rising:   { label:'Rising',   arrow:'↑', color:this.TEAL },
+      steady:   { label:'Steady',   arrow:'→', color:this.ORANGE },
+      fading:   { label:'Fading',   arrow:'↓', color:this.MUT },
+    })[s];
+  }
+  consMeta(c) {
+    return ({
+      corroborated: { label:'Corroborated', color:this.GREEN },
+      mixed:        { label:'Mixed signal', color:this.ORANGE },
+      suspicious:   { label:'Suspicious',   color:this.RED },
+    })[c];
+  }
+  ringColorFor(score) {
+    if (score >= 68) return this.GREEN;
+    if (score >= 42) return this.ORANGE;
+    return this.RED;
+  }
+  tone(t) { return t === 'pos' ? this.GREEN : (t === 'warn' ? this.ORANGE : this.RED); }
+  rState(st) { return st === 'pass' ? this.GREEN : (st === 'watch' ? this.ORANGE : this.RED); }
+
+  chipStyle(active) {
+    const A = this.A();
+    const base = { padding:'7px 13px', borderRadius:'999px', fontSize:'12.5px', letterSpacing:'-.01em', whiteSpace:'nowrap', cursor:'pointer', flexShrink:0, transition:'all .15s' };
+    return active
+      ? { ...base, border:`1px solid ${this.hexA(A,.35)}`, background:this.hexA(A,.1), color:A, fontWeight:600 }
+      : { ...base, border:`1px solid ${this.HAIR}`, background:this.SURF, color:this.MUT, fontWeight:500 };
+  }
+  segStyle(active) {
+    const A = this.A();
+    const base = { flex:1, padding:'7px 4px', borderRadius:'8px', fontSize:'12.5px', fontWeight:600, letterSpacing:'-.01em', cursor:'pointer', transition:'all .15s', border:'none' };
+    return active
+      ? { ...base, background:this.hexA(A,.1), color:A }
+      : { ...base, background:'transparent', color:this.MUT };
+  }
+
+  set(k, v) { this.setState({ [k]: v }); }
+  open(id) {
+    this.setState(s => {
+      const w = { ...s.watch };
+      if (!w[id]) w[id] = 'seen';
+      return { selectedId: id, closing: false, watch: w };
+    });
+  }
+  close() {
+    this.setState({ closing: true });
+    setTimeout(() => this.setState({ selectedId: null, closing: false }), 250);
+  }
+  cycleWatch(id, e) {
+    if (e) e.stopPropagation();
+    this.setState(s => {
+      const w = { ...s.watch };
+      w[id] = w[id] === 'watching' ? 'seen' : 'watching';
+      return { watch: w };
+    });
+  }
+  refresh() { this.setState({ spinning: true }); setTimeout(() => this.setState({ spinning: false }), 900); }
+  rerun() { this.setState({ rerunning: true }); setTimeout(() => this.setState(s => ({ rerunning: false, recomputed: { ...s.recomputed, [s.selectedId]: true } })), 1000); }
+
+  decorate(it) {
+    const A = this.A();
+    const sm = this.stageMeta(it.stage), cm = this.consMeta(it.consistency);
+    const st = this.state.watch[it.id];
+    const isPH = it.source === 'ph';
+    const tags = isPH ? it.topics : [it.language, ...it.topics].filter(Boolean);
+    const pad = this.props.density === 'compact' ? '12px 13px' : '15px 15px';
+    const stateMap = {
+      watching: { label:'Watching', color:A },
+      seen:     { label:'Seen', color:this.FAINT },
+      dismissed:{ label:'Dismissed', color:this.RED },
+    };
+    const stag = st ? stateMap[st] : null;
+    const dim = st === 'dismissed' ? 0.55 : 1;
+
+    return {
+      ...it, tags, isGithub: !isPH, isPH,
+      srcWrap: { flexShrink:0, width:'22px', height:'22px', display:'flex', alignItems:'center', justifyContent:'center', marginTop:'1px' },
+      stageLabel: sm.label, stageArrow: sm.arrow,
+      stagePill: { display:'inline-flex', alignItems:'center', gap:'4px', padding:'3.5px 9px', borderRadius:'999px', fontSize:'11px', fontWeight:600, color:sm.color, background:this.hexA(sm.color,.11), whiteSpace:'nowrap' },
+      stagePillSm: { fontSize:'10.5px', fontWeight:600, color:sm.color, background:this.hexA(sm.color,.11), borderRadius:'999px', padding:'3px 8px', flexShrink:0, whiteSpace:'nowrap' },
+      primaryStyle: { fontSize:'19px', fontWeight:700, letterSpacing:'-.02em', color:this.INK, lineHeight:1 },
+      consDot: { width:'6px', height:'6px', borderRadius:'50%', background:cm.color, flexShrink:0 },
+      consLabel: cm.label,
+      consLabelStyle: { fontSize:'11px', color:cm.color, fontWeight:500, letterSpacing:'-.01em' },
+      rowStyle: { display:'block', width:'100%', textAlign:'left', border:`1px solid ${this.HAIR}`, borderRadius:'12px', background:this.SURF, padding:pad, cursor:'pointer', opacity:dim, transition:'transform .15s, border-color .15s, box-shadow .2s', animation:'rowIn .3s ease both' },
+      rowHover: { borderColor:'#d9d7d3', boxShadow:'0 1px 2px rgba(0,0,0,.03), 0 6px 18px rgba(0,0,0,.06)' },
+      rowActive: { transform:'scale(.99)' },
+      isWatching: st === 'watching', notWatching: st !== 'watching',
+      watchBtnStyle: { flexShrink:0, width:'32px', height:'32px', borderRadius:'8px', border:'none', background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color: st === 'watching' ? A : this.FAINT, transition:'color .15s' },
+      stateTag: stag ? { show:true, label:stag.label, style:{ fontSize:'10px', fontWeight:600, color:stag.color, background:this.hexA(stag.color,.12), borderRadius:'999px', padding:'2px 7px' } } : { show:false },
+      onOpen: () => this.open(it.id),
+      onWatch: (e) => this.cycleWatch(it.id, e),
+    };
+  }
+
+  scopeGeom(items) {
+    return items.map(it => {
+      const left = 6 + it.quality * 0.88;
+      const top  = 94 - it.momentumPos * 0.88;
+      const sm = this.stageMeta(it.stage);
+      const color = it.consistency === 'suspicious' ? this.RED : sm.color;
+      const size = 8 + Math.min(13, it.totalNum / 1400);
+      const hero = it.id === 'driftdb';
+      return {
+        name: it.name, id: it.id,
+        onClick: () => this.open(it.id),
+        wrapStyle: { position:'absolute', left:left+'%', top:top+'%', transform:'translate(-50%,-50%)', width:(size+16)+'px', height:(size+16)+'px', border:'none', background:'transparent', cursor:'pointer', padding:0, display:'flex', alignItems:'center', justifyContent:'center', zIndex: hero?3:2 },
+        dotStyle: { position:'relative', zIndex:2, width:size+'px', height:size+'px', borderRadius:'50%', background:color, boxShadow:`0 0 ${hero?16:9}px ${this.hexA(color,hero?.95:.7)}`, border:`1.5px solid ${this.hexA(color,.95)}` },
+        pulse: hero,
+        pulseStyle: { position:'absolute', width:size+'px', height:size+'px', borderRadius:'50%', border:`1.5px solid ${color}`, animation:'blipPulse 2.6s ease-out infinite' },
+      };
+    });
+  }
+
+  renderVals() {
+    const A = this.A();
+    const S = this.state;
+    const all = this.DATA();
+
+    let list = all.slice();
+    if (S.source !== 'all') list = list.filter(x => x.source === S.source);
+    if (S.stage !== 'all') list = list.filter(x => x.stage === S.stage);
+    if (S.lang !== 'all') {
+      const q = S.lang.toLowerCase();
+      list = list.filter(x => (x.language && x.language.toLowerCase() === q) || x.topics.some(t => t.toLowerCase() === q));
+    }
+    if (S.view === 'watchlist') {
+      if (S.watchFilter === 'all') list = list.filter(x => S.watch[x.id] && S.watch[x.id] !== 'dismissed');
+      else list = list.filter(x => S.watch[x.id] === S.watchFilter);
+    } else {
+      list = list.filter(x => S.watch[x.id] !== 'dismissed');
+    }
+    const sorters = {
+      momentum: (a,b) => b.momentum - a.momentum,
+      velocity: (a,b) => parseInt(String(b.primary).replace(/[^0-9-]/g,'')) - parseInt(String(a.primary).replace(/[^0-9-]/g,'')),
+      total:    (a,b) => b.totalNum - a.totalNum,
+      newest:   (a,b) => a.ageDays - b.ageDays,
+    };
+    list.sort(sorters[S.sortKey] || sorters.momentum);
+
+    const decorated = list.map((it,i) => {
+      const d = this.decorate(it);
+      const sm = this.stageMeta(it.stage);
+      const color = it.consistency === 'suspicious' ? this.RED : sm.color;
+      d.rank = String(i+1).padStart(2,'0');
+      d.rankStyle = { fontSize:'11px', color:'#a39e98', width:'18px', flexShrink:0, fontWeight:500 };
+      d.legendDot = { width:'9px', height:'9px', borderRadius:'50%', background:color, flexShrink:0 };
+      return d;
+    });
+
+    const srcOpts = [['all','All'],['github','GitHub'],['ph','Product Hunt']];
+    const sourceSeg = srcOpts.map(([k,l]) => ({ label:l, style:this.segStyle(S.source===k), onClick:()=>this.set('source',k) }));
+    const stageOpts = [['all','All'],['emerging','Emerging'],['rising','Rising'],['steady','Steady'],['fading','Fading']];
+    const stageChips = stageOpts.map(([k,l]) => ({ label:l, style:this.chipStyle(S.stage===k), onClick:()=>this.set('stage',k) }));
+    const langOpts = [['all','All tech'],['Rust','Rust'],['TypeScript','TS'],['Go','Go'],['Python','Python'],['ai','AI'],['database','Database']];
+    const langChips = langOpts.map(([k,l]) => ({ label:l, style:this.chipStyle(S.lang===k), onClick:()=>this.set('lang',k) }));
+    const watchOpts = [['all','Active'],['watching','Watching'],['seen','Seen'],['dismissed','Dismissed']];
+    const watchChips = watchOpts.map(([k,l]) => ({ label:l, style:this.chipStyle(S.watchFilter===k), onClick:()=>this.set('watchFilter',k) }));
+
+    const sortLabels = { momentum:'Momentum ↓', velocity:'Velocity ↓', total:'Total ↓', newest:'Newest' };
+    const sortOrder = ['momentum','velocity','total','newest'];
+    const onCycleSort = () => this.set('sortKey', sortOrder[(sortOrder.indexOf(S.sortKey)+1)%sortOrder.length]);
+
+    const tabBtn = (active) => ({ display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', background:'none', border:'none', cursor:'pointer', color: active ? A : this.FAINT, transition:'color .15s', padding:'2px 8px' });
+    const watchCount = all.filter(x => S.watch[x.id] === 'watching').length;
+
+    let sel = null;
+    if (S.selectedId) {
+      const raw = all.find(x => x.id === S.selectedId);
+      if (raw) {
+        sel = this.decorate(raw);
+        const ringColor = this.ringColorFor(raw.score);
+        const C = 2 * Math.PI * 52;
+        const arc = raw.score/100 * C;
+        sel.ringColor = ringColor;
+        sel.ringGlow = this.hexA(ringColor,.4);
+        sel.ringLen = C.toFixed(1);
+        sel.ringOff = (C - arc).toFixed(1);
+        sel.srcWrap = { flexShrink:0, width:'26px', height:'26px', display:'flex', alignItems:'center', justifyContent:'center' };
+        const qx = 6 + raw.quality*0.88, qy = 94 - raw.momentumPos*0.88;
+        sel.qBlip = { position:'absolute', left:qx+'%', top:qy+'%', transform:'translate(-50%,-50%)', width:'13px', height:'13px', borderRadius:'50%', background:ringColor, boxShadow:`0 0 10px ${this.hexA(ringColor,.55)}`, border:`2px solid ${this.hexA(ringColor,.95)}`, zIndex:2 };
+        const inTarget = raw.quality>=64 && raw.momentumPos>=58 && (raw.stage==='emerging'||raw.stage==='rising') && raw.consistency!=='suspicious' && raw.vetoes.length===0;
+        sel.targetLabel = inTarget ? '● In the sweet spot' : (raw.vetoes.length ? '● Vetoed — out' : '○ Outside target');
+        sel.targetTag = { marginTop:'8px', fontSize:'10.5px', fontWeight:600, textAlign:'center', color: inTarget ? this.GREEN : (raw.vetoes.length ? this.RED : this.FAINT) };
+        sel.hasVeto = raw.vetoes.length > 0;
+        sel.rubricTitle = raw.source==='ph' ? 'CEO RUBRIC' : 'CTO RUBRIC';
+        sel.rubricLens = raw.source==='ph' ? 'is it a business?' : 'is it trustworthy?';
+        sel.evidenceTitle = 'SUPPORTING SIGNALS';
+        sel.reasons = raw.reasons.map(r => ({ ...r, dotStyle: { flexShrink:0, width:'8px', height:'8px', borderRadius:'50%', marginTop:'6px', background:this.tone(r.tone) } }));
+        sel.rubric = raw.rubric.map(r => {
+          const c = this.rState(r.state);
+          return { ...r, scoreText: r.score+'/10',
+            scoreStyle: { fontSize:'11.5px', fontWeight:700, color:c, width:'30px', textAlign:'right' },
+            barStyle: { position:'absolute', left:0, top:0, height:'100%', width:(r.score*10)+'%', background:c, borderRadius:'3px' } };
+        });
+        sel.evidence = raw.evidence.map(e => ({ ...e, valueStyle: { fontSize:'15px', fontWeight:700, letterSpacing:'-.01em', color: (e.sub==='flag') ? this.RED : this.INK } }));
+        sel.computedAt = S.recomputed[S.selectedId] ? 'just now' : '2h ago';
+        sel.watchBtnStyleLg = { width:'34px', height:'34px', borderRadius:'8px', border:`1px solid ${this.HAIR}`, background:this.SURF, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color: sel.isWatching ? A : this.MUT };
+      }
+    }
+
+    return {
+      accent: A,
+      liveDot: this.GREEN, liveGlow: this.hexA(this.GREEN,.55),
+      green: this.GREEN,
+      ringStroke: 'rgba(255,255,255,.13)', gridStroke: 'rgba(255,255,255,.17)',
+      spotGlow: this.hexA(this.GREEN,.32), spotBorder: 'rgba(255,255,255,.3)', spotText: '#8ce8ac',
+      sweepTint: 'rgba(150,195,255,.16)', axisColor: 'rgba(255,255,255,.5)',
+      qSpotBg: this.hexA(this.GREEN,.09), qSpotBorder: this.hexA(this.GREEN,.34),
+      asOf: 'Jul 3 · 08:00 PDT',
+      countLabel: all.length + ' signals tracked',
+      showList: S.view === 'feed' || S.view === 'watchlist',
+      showScope: S.view === 'scope',
+      showWatchTitle: S.view === 'watchlist',
+      sweepOn: this.props.sweep !== false,
+      visible: decorated,
+      isEmpty: decorated.length === 0,
+      blips: this.scopeGeom(all.filter(x => S.watch[x.id] !== 'dismissed')),
+      sourceSeg, stageChips, langChips, watchChips,
+      sortLabel: sortLabels[S.sortKey], onCycleSort,
+      onFeed: () => this.set('view','feed'),
+      onScope: () => this.set('view','scope'),
+      onWatchTab: () => this.setState({ view:'watchlist', watchFilter:'all' }),
+      tabFeed: tabBtn(S.view==='feed'),
+      tabScope: tabBtn(S.view==='scope'),
+      tabWatch: tabBtn(S.view==='watchlist'),
+      hasWatch: watchCount > 0, watchCount,
+      watchBadge: { position:'absolute', top:'-4px', right:'-7px', minWidth:'15px', height:'15px', padding:'0 4px', borderRadius:'999px', background:A, color:'#fff', fontSize:'9px', fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' },
+      onRefresh: () => this.refresh(),
+      refreshSpin: S.spinning ? { animation:'spin .9s linear', transformOrigin:'center' } : {},
+      sel,
+      overlayStyle: { position:'absolute', inset:0, zIndex:40, animation: S.closing ? 'ddDown .25s cubic-bezier(.4,0,1,1) both' : 'ddUp .32s cubic-bezier(.16,1,.3,1) both' },
+      onClose: () => this.close(),
+      onRerun: () => this.rerun(),
+      rerunLabel: S.rerunning ? 'Running…' : 'Re-run',
+      rerunSpin: S.rerunning ? { animation:'spin .9s linear infinite', transformOrigin:'center' } : {},
+    };
+  }
+}
+</script>
+</body>
+</html>

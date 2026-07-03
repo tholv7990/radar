@@ -49,7 +49,7 @@ class ScopeScreen extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(it.name, maxLines: 1, overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: kInk)),
-                  Text('Quality ${it.provisionalQuality} · Momentum ${momentumPos(it).round()}',
+                  Text('Quality ${it.qualityScore ?? it.provisionalQuality} · Momentum ${momentumPos(it).round()}',
                       style: const TextStyle(fontSize: 12, color: kMut)),
                 ]),
               ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../data/repository.dart';
 import '../models/signal_item.dart';
 import '../theme.dart';
+import 'deep_dive_overlay.dart';
 import 'feed_screen.dart';
 import 'scope_screen.dart';
 
@@ -49,9 +49,11 @@ class _HomeScaffoldState extends State<HomeScaffold> {
     }
   }
 
-  Future<void> _open(SignalItem it) async {
-    if (it.url == null) return;
-    await launchUrl(Uri.parse(it.url!), mode: LaunchMode.externalApplication);
+  void _open(SignalItem it) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DeepDiveOverlay(item: it),
+      fullscreenDialog: true,
+    ));
   }
 
   Future<void> _watch(SignalItem it) async {

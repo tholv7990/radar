@@ -42,14 +42,19 @@ class RadarPainter extends CustomPainter {
     );
 
     for (final it in items) {
-      final qx = (it.provisionalQuality.clamp(0, 100)) / 100.0;
+      // Deep-dive done: solid blip positioned by the confirmed quality_score.
+      // Otherwise: hollow blip positioned by the provisional quality (Phase 1).
+      final done = it.deepDiveStatus == 'done' && it.qualityScore != null;
+      final qx = ((done ? it.qualityScore! : it.provisionalQuality).clamp(0, 100)) / 100.0;
       final my = momentumPos(it) / 100.0;
       final x = pad + (w - 2 * pad) * qx;
       final y = pad + (h - 2 * pad) * (1 - my); // higher momentum → higher up
       final color = it.consistency == 'suspicious' ? kRed : stageMeta(it.momentumStage).color;
-      // Phase 1: hollow blip (stroke only) — solid arrives in Phase 2 on real quality_score.
-      canvas.drawCircle(Offset(x, y), 6,
-          Paint()..style = PaintingStyle.stroke..strokeWidth = 1.6..color = color);
+      final paint = Paint()
+        ..color = color
+        ..strokeWidth = 1.6
+        ..style = done ? PaintingStyle.fill : PaintingStyle.stroke;
+      canvas.drawCircle(Offset(x, y), 6, paint);
     }
   }
 

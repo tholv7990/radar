@@ -10,6 +10,7 @@ void main() {
       'provisional_quality': 89, 'velocity': 2140, 'total_metric': 8400,
       'consistency': 'corroborated', 'momentum_stage': 'emerging',
       'rank_score': 2140, 'watch_state': 'watching',
+      'quality_score': 91, 'deep_dive_status': 'done',
     });
     expect(it.id, 7);
     expect(it.source, 'github');
@@ -18,5 +19,7 @@ void main() {
     expect(it.consistency, 'corroborated');
     expect(it.watchState, 'watching');
     expect(it.topics, ['database']);
+    expect(it.qualityScore, 91);
+    expect(it.deepDiveStatus, 'done');
   });
 }

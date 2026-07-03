@@ -17,6 +17,8 @@ class SignalItem {
   final num rankScore;
   final String? watchState;   // seen | watching | dismissed | null
   final DateTime? capturedAt;
+  final int? qualityScore;
+  final String? deepDiveStatus;
 
   SignalItem({
     required this.id, required this.source, required this.name, this.oneLiner,
@@ -24,6 +26,7 @@ class SignalItem {
     this.comments, required this.provisionalQuality, this.velocity,
     this.totalMetric, required this.consistency, required this.momentumStage,
     required this.rankScore, this.watchState, this.capturedAt,
+    this.qualityScore, this.deepDiveStatus,
   });
 
   bool get isGithub => source == 'github';
@@ -50,5 +53,7 @@ class SignalItem {
         rankScore: (m['rank_score'] ?? 0) as num,
         watchState: m['watch_state'] as String?,
         capturedAt: m['captured_at'] == null ? null : DateTime.tryParse(m['captured_at'] as String),
+        qualityScore: (m['quality_score'] as num?)?.toInt(),
+        deepDiveStatus: m['deep_dive_status'] as String?,
       );
 }

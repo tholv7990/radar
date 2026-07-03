@@ -60,7 +60,7 @@ requirements.txt
 
 ```
 requests==2.32.3
-psycopg2-binary==2.9.9
+psycopg2-binary>=2.9.10
 python-dotenv==1.0.1
 pytest==8.3.3
 ```

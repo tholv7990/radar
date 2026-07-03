@@ -17,6 +17,17 @@ export function detectTestsCI(paths: string[]) {
   };
 }
 
+// Pure helper — parses a package.json body and returns its `name` field, or
+// null on a missing/empty/non-string name or invalid JSON. Never throws.
+export function pkgNameFromPackageJson(text: string): string | null {
+  try {
+    const parsed = JSON.parse(text) as { name?: unknown };
+    return typeof parsed?.name === "string" && parsed.name.length > 0 ? parsed.name : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function githubEvidence(e: Entity): Promise<Evidence> {
   const full = e.external_id; // owner/repo
   const grid: EvidenceItem[] = [];
@@ -51,6 +62,49 @@ export async function githubEvidence(e: Entity): Promise<Evidence> {
   }, [] as string[]);
   const { hasTests, hasCI } = detectTestsCI(tree);
   if (tree.length) { grid.push({ label: "Tests / CI", value: `${hasTests ? "tests" : "no tests"} · ${hasCI ? "CI" : "no CI"}` }); ctx.hasTests = hasTests; ctx.hasCI = hasCI; }
+
+  // npm download adoption — only if the repo ships a top-level package.json.
+  const pkgJsonText = tree.includes("package.json") ? await safe(async () => {
+    const r = await fetch(`${GH}/repos/${full}/contents/package.json`, {
+      headers: { ...ghHeaders(), "Accept": "application/vnd.github.raw" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) throw new Error();
+    return await r.text();
+  }, "") : "";
+  const npmName = pkgJsonText ? pkgNameFromPackageJson(pkgJsonText) : null;
+
+  if (npmName) {
+    const downloads = await safe(async () => {
+      const r = await fetch(`https://api.npmjs.org/downloads/point/last-month/${encodeURIComponent(npmName)}`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!r.ok) throw new Error();
+      return (await r.json() as { downloads: number }).downloads;
+    }, 0);
+    if (downloads > 0) {
+      grid.push({ label: "npm downloads", value: `${downloads}/mo` });
+      ctx.npm_downloads = downloads;
+    }
+  } else if (tree.includes("pyproject.toml") || tree.includes("setup.py")) {
+    // PyPI fallback — only attempted when there's no npm package name. Guess
+    // the package name from the repo name (best-effort; no manifest parsing).
+    const repoName = full.split("/")[1] ?? "";
+    const pkg = repoName.toLowerCase().replaceAll("_", "-");
+    if (pkg) {
+      const lastMonth = await safe(async () => {
+        const r = await fetch(`https://pypistats.org/api/packages/${pkg}/recent`, {
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!r.ok) throw new Error();
+        return (await r.json() as { data: { last_month: number } }).data.last_month;
+      }, 0);
+      if (lastMonth > 0) {
+        grid.push({ label: "PyPI downloads", value: `${lastMonth}/mo` });
+        ctx.pypi_downloads = lastMonth;
+      }
+    }
+  }
 
   const readme = await safe(async () => {
     const r = await fetch(`${GH}/repos/${full}/readme`, { headers: { ...ghHeaders(), "Accept": "application/vnd.github.raw" }, signal: AbortSignal.timeout(8000) });

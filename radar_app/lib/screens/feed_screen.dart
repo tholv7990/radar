@@ -64,7 +64,7 @@ class FeedScreen extends StatelessWidget {
               ? const Center(
                   child: Text(
                     'No signals match this filter.',
-                    style: TextStyle(fontSize: 13, letterSpacing: 0.2, color: kFaint),
+                    style: TextStyle(fontSize: 13, letterSpacing: 0.2, color: kMut),
                   ),
                 )
               : ListView.separated(

@@ -269,7 +269,7 @@ class _Header extends StatelessWidget {
                 const Text(
                   'AS OF',
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     letterSpacing: 1.3,
                     color: kFaint,
                     fontWeight: FontWeight.w600,
@@ -283,7 +283,7 @@ class _Header extends StatelessWidget {
                 const Spacer(),
                 Text(
                   '$count signals tracked',
-                  style: const TextStyle(fontSize: 10.5, letterSpacing: 0.4, color: kFaint, fontWeight: FontWeight.w500),
+                  style: const TextStyle(fontSize: 11.5, letterSpacing: 0.4, color: kFaint, fontWeight: FontWeight.w500),
                 ),
               ],
             ),

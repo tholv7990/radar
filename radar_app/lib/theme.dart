@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 const kInk = Color(0xFF1A1A1A);
 const kInk2 = Color(0xFF31302E);
@@ -18,4 +19,8 @@ ThemeData buildRadarTheme() => ThemeData(
       scaffoldBackgroundColor: kCanvas,
       colorScheme: ColorScheme.fromSeed(seedColor: kAccent, surface: kSurf),
       useMaterial3: true,
+      fontFamily: GoogleFonts.inter().fontFamily,
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData(brightness: Brightness.light).textTheme,
+      ),
     );

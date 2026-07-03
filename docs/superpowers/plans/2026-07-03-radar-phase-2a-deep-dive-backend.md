@@ -11,7 +11,8 @@
 ## Global Constraints
 
 - **No LLM anywhere but this function, only on invoke.** (Spec invariant — the background/list path is untouched.)
-- **Model:** `claude-sonnet-5` (Claude Sonnet). One call per deep-dive; result cached in `deep_dive_cache`, re-run only on manual re-invoke.
+- **LLM endpoint is a setting (function secrets), not hardcoded:** `ANTHROPIC_API_KEY` (required), `ANTHROPIC_BASE_URL` (optional — point at a reseller/proxy endpoint; unset = Anthropic direct), `ANTHROPIC_MODEL` (optional — defaults to `claude-sonnet-5`). Lets you use a reseller/gateway or swap models without code changes. One call per deep-dive; result cached in `deep_dive_cache`, re-run only on manual re-invoke.
+- **Reseller caveat:** the rubric forces a JSON tool call (`tool_choice`), which needs a genuinely Anthropic-compatible Messages API. If the chosen endpoint rejects forced tool use, fall back to "ask for JSON in the prompt + `JSON.parse`" (documented in Task 4).
 - **Forced JSON:** the model MUST return via a tool (`submit_evaluation`) whose input schema IS the output — no free-text parsing.
 - **Secrets server-side only:** `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GH_PAT`, `PH_TOKEN` are Edge Function secrets — never in the app or committed.
 - **Partial-failure tolerant:** a failed evidence lookup (e.g. npm down) flags missing evidence; it does NOT fail the deep-dive.
@@ -488,9 +489,15 @@ export function promptFor(ev: Evidence, e: Entity): string {
 }
 
 export async function evaluate(ev: Evidence, e: Entity): Promise<EvalResult> {
-  const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
+  // Provider is a setting: key + optional reseller/proxy base URL + optional model override.
+  const baseURL = Deno.env.get("ANTHROPIC_BASE_URL"); // set to the reseller/gateway endpoint
+  const client = new Anthropic({
+    apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
+    ...(baseURL ? { baseURL } : {}),
+  });
+  const model = Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5";
   const msg = await client.messages.create({
-    model: "claude-sonnet-5",
+    model,
     max_tokens: 2000,
     tools: [SUBMIT_TOOL as unknown as Anthropic.Tool],
     tool_choice: { type: "tool", name: "submit_evaluation" },
@@ -502,6 +509,8 @@ export async function evaluate(ev: Evidence, e: Entity): Promise<EvalResult> {
   return { ...out, evidence: ev.grid }; // attach the supporting-signals grid for the overlay
 }
 ```
+
+> **Reseller/proxy compatibility fallback.** The forced `tool_choice` path needs an Anthropic-compatible Messages API. If the configured `ANTHROPIC_BASE_URL` gateway returns a 400/parse error on tool use during the Task 6 smoke, switch `evaluate` to a no-tool variant: drop `tools`/`tool_choice`, append `"Respond with ONLY a JSON object matching this shape: <SUBMIT_TOOL.input_schema>"` to the prompt, read the text block, and `JSON.parse` it (validate against the schema; retry once on parse failure). Same output type, works on gateways that don't support forced tool use. Only make this switch if the tool path actually fails against the user's endpoint.
 
 - [ ] **Step 2: `rubric_test.ts`** (schema/shape — no network)
 
@@ -601,9 +610,12 @@ git commit -m "feat(deep-dive): orchestrate fetch -> rubric -> cache (running/do
 - [ ] **Step 1: Set function secrets**
 
 ```bash
-supabase secrets set ANTHROPIC_API_KEY=<your-key> GH_PAT=<your-github-pat> PH_TOKEN=<your-ph-token>
+supabase secrets set ANTHROPIC_API_KEY=<your-or-reseller-key> GH_PAT=<your-github-pat> PH_TOKEN=<your-ph-token>
+# reseller/proxy gateway — set the base URL (HOST ROOT, no /v1 — the SDK appends /v1/messages)
+# and the model string they expose. Example for shopaikey:
+supabase secrets set ANTHROPIC_BASE_URL=https://api.shopaikey.com ANTHROPIC_MODEL=<their-model-string>
 ```
-(`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically for deployed functions.)
+(`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically for deployed functions. Omit `ANTHROPIC_BASE_URL`/`ANTHROPIC_MODEL` to use Anthropic direct with `claude-sonnet-5`.)
 
 - [ ] **Step 2: Deploy**
 

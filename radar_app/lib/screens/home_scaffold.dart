@@ -4,6 +4,7 @@ import '../data/repository.dart';
 import '../models/signal_item.dart';
 import '../theme.dart';
 import 'feed_screen.dart';
+import 'scope_screen.dart';
 
 class HomeScaffold extends StatefulWidget {
   const HomeScaffold({super.key});
@@ -90,7 +91,7 @@ class _HomeScaffoldState extends State<HomeScaffold> {
           onOpen: _open,
           onWatch: _watch,
         ),
-        const _ScopePlaceholder(),
+        ScopeScreen(items: _items, onOpen: _open),
         FeedScreen(
           items: _items,
           source: 'all',
@@ -298,8 +299,3 @@ class _RadarGlyphPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _ScopePlaceholder extends StatelessWidget {
-  const _ScopePlaceholder();
-  @override
-  Widget build(BuildContext context) => const Center(child: Text('Scope — Task 7', style: TextStyle(color: kFaint)));
-}

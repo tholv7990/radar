@@ -1,0 +1,4 @@
+project_id = "rdpvppcaskhoedvuhamp"
+
+[functions.deep-dive]
+verify_jwt = true
